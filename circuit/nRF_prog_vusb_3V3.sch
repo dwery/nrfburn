@@ -15593,7 +15593,7 @@ Source: www.kingbright.com</description>
 <part name="C1" library="rcl" deviceset="CPOL-EU" device="SMCB" value="33uF"/>
 <part name="LED1" library="led" deviceset="LED" device="CHIPLED_0805"/>
 <part name="R1" library="rcl" deviceset="R-EU_" device="M0805"/>
-<part name="JP1" library="KileParts" deviceset="JP1E" device="" value="TGT_PWR"/>
+<part name="TGT_PWR" library="KileParts" deviceset="JP1E" device="" value="TGT_PWR"/>
 <part name="GND4" library="SparkFun" deviceset="GND" device=""/>
 <part name="C2" library="rcl" deviceset="C-EU" device="C0805K" value="470nF"/>
 <part name="R2" library="rcl" deviceset="R-EU_" device="M0805" value="10K"/>
@@ -15640,7 +15640,7 @@ Source: www.kingbright.com</description>
 <instance part="C1" gate="G$1" x="10.16" y="86.36"/>
 <instance part="LED1" gate="G$1" x="154.94" y="88.9" rot="R90"/>
 <instance part="R1" gate="G$1" x="134.62" y="88.9"/>
-<instance part="JP1" gate="A" x="134.62" y="60.96"/>
+<instance part="TGT_PWR" gate="A" x="134.62" y="60.96"/>
 <instance part="GND4" gate="1" x="144.78" y="27.94"/>
 <instance part="C2" gate="G$1" x="-12.7" y="86.36"/>
 <instance part="R2" gate="G$1" x="114.3" y="43.18" rot="R270"/>
@@ -15909,7 +15909,7 @@ Source: www.kingbright.com</description>
 <net name="VIN" class="0">
 <segment>
 <pinref part="NRF_GEN" gate="G$1" pin="VUSB"/>
-<pinref part="JP1" gate="A" pin="2"/>
+<pinref part="TGT_PWR" gate="A" pin="2"/>
 <wire x1="147.32" y1="48.26" x2="137.16" y2="48.26" width="0.1524" layer="91"/>
 <wire x1="137.16" y1="48.26" x2="137.16" y2="58.42" width="0.1524" layer="91"/>
 <label x="139.7" y="48.26" size="1.778" layer="95"/>
@@ -16096,10 +16096,17 @@ Source: www.kingbright.com</description>
 <junction x="-12.7" y="91.44"/>
 </segment>
 <segment>
-<pinref part="JP1" gate="A" pin="1"/>
+<pinref part="TGT_PWR" gate="A" pin="1"/>
 <wire x1="134.62" y1="58.42" x2="134.62" y2="50.8" width="0.1524" layer="91"/>
 <wire x1="134.62" y1="50.8" x2="127" y2="50.8" width="0.1524" layer="91"/>
 <label x="127" y="50.8" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="NRF_RESET" class="0">
+<segment>
+<pinref part="U$2" gate="G$1" pin="!RESET!"/>
+<wire x1="152.4" y1="7.62" x2="165.1" y2="7.62" width="0.1524" layer="91"/>
+<label x="154.94" y="7.62" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
