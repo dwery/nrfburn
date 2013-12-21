@@ -1,0 +1,215 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <time.h>
+
+#include <string>
+#include <memory>
+
+#include "programmer.h"
+#include "flashmem.h"
+#include "utils.h"
+
+void PrintHelp()
+{
+	printf("nrfburn v0.01\n");
+	printf("Usage: nrfburn [options]\n");
+	printf("Options:\n");
+	printf("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.\n");
+	printf("                   Default is 16kB.\n");
+	printf("  -w <filename>    Write contents of HEX file to nRF24LU1+ MainBlock flash.\n");
+	printf("                   Automatically performs a chip erase before programming.\n");
+	printf("  -r <filename>    Read nRF24LU1+ MainBlock into HEX file.\n");
+	printf("  -p <filename>    Read nRF24LU1+ InfoPage into HEX file.\n");
+	printf("  -e               Perform a chip erase.\n");
+	printf("                   This erases only the MainBlock, and leaves the InfoPage intact.\n");
+	printf("  -i <chipID>      Erase the InfoPage and write the specified chip ID.\n");
+	printf("                   This also performs a chip erase.\n");
+	printf("                   chipID must be in the format xx-xx-xx-xx-xx where x is a hex digit.\n");
+	printf("\n");
+}
+
+struct Options
+{
+	std::string		WriteMBFrom;	// HEX -> MainBlock
+	std::string		ReadMBInto;		// MainBlock -> HEX
+	std::string		ReadIPInto;		// InfoPage -> HEX
+	std::string		ChipID;
+	int				FlashSize;
+	bool			EraseAll;
+
+	Options()
+		: FlashSize(16*1024), EraseAll(false)
+	{}
+};
+
+void ParseArgs(const int argc, const char* argv[], Options& opt)
+{
+	int c = 1;
+	while (c < argc)
+	{
+		if (argv[c] == NULL  ||  *argv[c] != '-'  ||  strlen(argv[c]) < 2)
+			throw std::string("Invalid argument.");
+
+		switch (argv[c][1])
+		{
+		case 'w':
+			++c;
+
+			if (c < argc)
+				opt.WriteMBFrom = argv[c];
+			else
+				throw std::string("Invalid HEX file name.");
+
+			break;
+		case 'r':
+			++c;
+
+			if (c < argc)
+				opt.ReadMBInto = argv[c];
+			else
+				throw std::string("Invalid HEX file name.");
+
+			break;
+		case 'p':
+			++c;
+
+			if (c < argc)
+				opt.ReadIPInto = argv[c];
+			else
+				throw std::string("Invalid HEX file name.");
+
+			break;
+		case 'e':
+			opt.EraseAll = true;
+			break;
+		case 'f':
+			++c;
+
+			opt.FlashSize = 0;
+			
+			if (c < argc)
+			{
+				if (strcmp(argv[c], "16") == 0)
+					opt.FlashSize = 16*1024;
+				else if (strcmp(argv[c], "32") == 0)
+					opt.FlashSize = 32*1024;
+			}
+			
+			if (opt.FlashSize == 0)
+				throw std::string("Invalid flash size.");
+			
+			break;
+		case 'i':
+			++c;
+
+			if (c < argc)
+				opt.ChipID = argv[c];
+			else
+				throw std::string("ChipID not specified.");
+
+			break;
+		default:
+			throw std::string("Invalid command line option: -") + argv[c][1];
+			break;
+		}
+
+		++c;
+	}
+}
+
+std::string int2str(const int i)
+{
+	char buff[32];
+	snprintf(buff, sizeof buff, "%d", i);
+	return buff;
+}
+
+void printProgressWrite(const bool is_init, const double progress)
+{
+	static clock_t time_begin;
+	if (is_init)
+		time_begin = clock();
+
+	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
+
+	std::string hashes(size_t(progress * 50), '#');
+	printf("\rFlashing | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
+	fflush(stdout);
+}
+
+void printProgressRead(const bool is_init, const double progress)
+{
+	static clock_t time_begin;
+	if (is_init)
+		time_begin = clock();
+
+	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
+
+	std::string hashes(size_t(progress * 50), '#');
+	printf("\rReading  | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
+	fflush(stdout);
+}
+
+void DoProg(const Options& opt)
+{
+	// open the port
+	Programmer prg(opt.FlashSize);
+	prg.Open();
+
+	// print the FSR and FPCR
+	printf("\nnRF24LU1+ flash registers:\n");
+	printf("FPCR = 0x%02x\n", prg.GetFPCR());
+	printf("FSR  = 0x%02x    DBG=%i  STP=%i  RDISMB=%i  RDISIP=%i\n",
+					prg.GetFSR(),
+					prg.GetFSR() & (1<<FSR_DBG) ? 1 : 0,
+					prg.GetFSR() & (1<<FSR_STP) ? 1 : 0,
+					prg.GetFSR() & (1<<FSR_RDISMB) ? 1 : 0,
+					prg.GetFSR() & (1<<FSR_RDISIP) ? 1 : 0);
+
+	printf("\nMainBlock readback %s\nInfoPage readback %s\n",
+					prg.GetFSR() & (1<<FSR_RDISMB) ? "disabled" : "enabled",
+					prg.GetFSR() & (1<<FSR_RDISIP) ? "disabled" : "enabled");
+
+	if (opt.EraseAll)
+	{
+		prg.EraseAll();
+	} else if (!opt.WriteMBFrom.empty()) {
+		puts("");
+		prg.WriteMainBlock(opt.WriteMBFrom, printProgressWrite);
+
+		printf("\n\nMainBlock flash written from %s\n", opt.WriteMBFrom.c_str());
+	} else if (!opt.ReadMBInto.empty()) {
+		puts("");
+		prg.ReadMainBlock(opt.ReadMBInto, printProgressRead);
+
+		printf("\n\nMainBlock contents saved into %s\n", opt.ReadMBInto.c_str());
+	} else if (!opt.ReadIPInto.empty()) {
+		prg.ReadInfoPage(opt.ReadIPInto);
+		printf("\nInfoPage contents saved into %s\n", opt.ReadIPInto.c_str());
+	} else if (!opt.ChipID.empty()) {
+		prg.WriteInfoPage(opt.ChipID);
+		printf("\nChipID %s written.\n", opt.ChipID.c_str());
+	}
+}
+
+int main(const int argc, const char* argv[])
+{
+	try {
+		Options opt;
+		if (argc == 1)
+		{
+			PrintHelp();
+			return 1;
+		}
+
+		ParseArgs(argc, argv, opt);
+
+		DoProg(opt);
+	} catch (std::string& e) {
+		fprintf(stderr, "%s\n", e.c_str());
+		return 1;
+	}
+
+	return 0;
+}
