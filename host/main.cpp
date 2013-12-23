@@ -17,12 +17,12 @@ void PrintHelp()
 	printf("Options:\n");
 	printf("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.\n");
 	printf("                   Default is 16kB.\n");
-	printf("  -w <filename>    Write contents of HEX file to nRF24LU1+ MainBlock flash.\n");
+	printf("  -w <filename>    Write contents of HEX file to nRF target MainBlock flash.\n");
 	printf("                   Automatically performs a chip erase before programming.\n");
 	printf("                   Does a verification pass after writing is complete.\n");
 	printf("  -v               Skip the flash write verification.\n");
-	printf("  -r <filename>    Read nRF24LU1+ MainBlock into HEX file.\n");
-	printf("  -p <filename>    Read nRF24LU1+ InfoPage into HEX file.\n");
+	printf("  -r <filename>    Read nRF target MainBlock into HEX file.\n");
+	printf("  -p <filename>    Read nRF target InfoPage into HEX file.\n");
 	printf("  -e               Perform a chip erase.\n");
 	printf("                   This erases only the MainBlock, and leaves the InfoPage intact.\n");
 	printf("  -i <chipID>      Erase the InfoPage and write the specified chip ID.\n");
