@@ -49,7 +49,7 @@ static void ProgDisableSPI(void)
 {
 	SPCR = 0;	// disable SPI
 	
-	// config the SPI pins to input and disable the pullup - leave them floating
+	// config the SPI pins to input and disable the pullup - leave everything floating
 	ClrBit(PORT(MOSI_PORT), MOSI_BIT);		// MOSI
 	ClrBit(DDR(MOSI_PORT), MOSI_BIT);
 	ClrBit(PORT(SCK_PORT), SCK_BIT);		// SCK
@@ -103,7 +103,7 @@ void ProgSpiEnd(void)
 	ProgDisableSPI();
 }
 
-static void ProgShiftCommand(uint8_t* pCommand, uint8_t num_bytes)
+static void ProgSpiShiftCommand(uint8_t* pCommand, uint8_t num_bytes)
 {
 	// start command - CSN goes low
 	ClrBit(PORT(CSN_PORT), CSN_BIT);
@@ -172,7 +172,7 @@ uint8_t ProgSpiRDSR(void)
 	uint8_t cmd[2];
 	cmd[0] = RDSR;
 	cmd[1] = 0x00;	// dummy
-	ProgShiftCommand(cmd, sizeof cmd);
+	ProgSpiShiftCommand(cmd, sizeof cmd);
 	
 	return cmd[1];
 }
@@ -184,7 +184,7 @@ void ProgSpiWRSR(const uint8_t fsr_val)
 	uint8_t cmd[2];
 	cmd[0] = WRSR;
 	cmd[1] = fsr_val;
-	ProgShiftCommand(cmd, sizeof cmd);
+	ProgSpiShiftCommand(cmd, sizeof cmd);
 }
 
 // reads 256 bytes of flash memory, starting from the given address - datasheet 17.7.1.4
@@ -233,7 +233,7 @@ void ProgSpiERASE_PAGE(const uint8_t page_num)
 	uint8_t cmd[2];
 	cmd[0] = ERASE_PAGE;
 	cmd[1] = page_num;
-	ProgShiftCommand(cmd, sizeof cmd);
+	ProgSpiShiftCommand(cmd, sizeof cmd);
 }
 
 // erases all content of the flash MainBlock by setting it to 0xFF - datasheet 17.7.1.7
@@ -248,7 +248,7 @@ uint8_t ProgSpiRDFPCR(void)
 	uint8_t cmd[2];
 	cmd[0] = RDFPCR;
 	cmd[1] = 0x00;
-	ProgShiftCommand(cmd, sizeof cmd);
+	ProgSpiShiftCommand(cmd, sizeof cmd);
 	
 	return cmd[1];
 }
@@ -265,9 +265,15 @@ void ProgSpiRDISMB(void)
 	ProgSimpleCommand(RDISMB);
 }
 
-void ProgSpiWaitForRDYN(void)
+bool ProgSpiWaitForRDYN(uint8_t timeout_ms)
 {
 	do {
-		_delay_ms(1);
-	} while (ProgSpiRDSR() & _BV(FSR_RDYN));
+		if (ProgSpiRDSR() & _BV(FSR_RDYN))
+			return true;
+
+		if (timeout_ms)
+			_delay_ms(1);
+	} while (timeout_ms--);
+	
+	return false;
 }

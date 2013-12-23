@@ -382,7 +382,7 @@ void HIDBurner::Open()
 	int pid = rawPid[0] + 256 * rawPid[1];
 	
 	if (usbhidOpenDevice(&hHIDDev, vid, vendorName, pid, productName) != 0)
-		throw std::string("Unable to open programmer.");
+		throw std::string("Unable to open nrfburn programmer.");
 }
 
 // #define LOG_HID_TRAFFIC

@@ -35,8 +35,8 @@
 enum request_code_e
 {
 	reqVersion			= 0x01,
-	reqProgSpiBegin		= 0x02,
-	reqProgSpiEnd			= 0x03,
+	reqProgBegin		= 0x02,
+	reqProgEnd			= 0x03,
 	reqReadFsrFpcr		= 0x04,
 	reqWriteMainBlock	= 0x05,
 	reqWriteInfoPage	= 0x06,
@@ -51,11 +51,17 @@ enum request_code_e
 
 enum response_code_e
 {
-	respBadChecksum	= 0x80,
+	respError = 0x80,
 	
 	// the other response codes are equal to the request code
 	// with the highest bit set. for instance:
 	// respWriteInfoPage == reqWriteInfoPage | 0x80
+};
+
+enum response_error_codes_e
+{
+	respErrBadChecksum		= 0x00,
+	respErrTimeoutExpired	= 0x01,
 };
 
 // number of bytes to write or read in one chunk
@@ -134,6 +140,13 @@ typedef struct {
 	uint8_t		fpcr;
 	uint8_t		checksum;
 } resp_read_fsr_fpcr_t;
+
+typedef struct {
+	uint8_t		length;
+	uint8_t		response;
+	uint8_t		error_code;
+	uint8_t		checksum;
+} resp_error_t;
 
 #pragma pack(pop)
 

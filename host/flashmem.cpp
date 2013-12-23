@@ -211,3 +211,12 @@ void FlashMemory::SaveHex(const std::string& filename) const
 
 	fclose(fhex);
 }
+
+// compare flashes - used for verification
+const bool FlashMemory::operator == (const FlashMemory& lhs) const
+{
+	if (flashSize != lhs.flashSize)
+		return false;
+	
+	return memcmp(flashBuffer.get(), lhs.flashBuffer.get(), flashSize) == 0;
+}

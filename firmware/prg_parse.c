@@ -24,6 +24,7 @@ union {
 // response buffer
 union {
 	resp_simple_t			simple;
+	resp_error_t			error;
 	resp_version_t			ver;
 	resp_read_flash_t		readFlash;
 	resp_read_fsr_fpcr_t	readFsrFpcr;
@@ -62,8 +63,8 @@ void progParseResetRx(void)
 	reqPos = 0;
 }
 
-// calcs the checksum of the message in the response buffer
-// assumes the entire response is valid except for the checksum
+// calcs the checksum of the message in the response buffer.
+// assumes the entire response is valid except for the checksum.
 // sets txPos and txLen which send the response on it's way
 static void prgPrepareResponse(void)
 {
@@ -114,8 +115,9 @@ void progParseSetRxByte(uint8_t byte)
 					SetBit(PORT(LED2_PORT), LED2_BIT);
 					SetBit(PORT(LED1_PORT), LED1_BIT);
 				
-					respBuffer.simple.length = sizeof respBuffer.simple;
-					respBuffer.simple.response = respBadChecksum;
+					respBuffer.error.length = sizeof respBuffer.error;
+					respBuffer.error.response = respError;
+					respBuffer.error.error_code = respErrBadChecksum;
 
 					prgPrepareResponse();
 				}
@@ -157,6 +159,13 @@ static void readFlash(void)
 	ProgSpiREAD(reqBuffer.readFlash.address, respBuffer.readFlash.data);
 }
 
+static void setTimeoutResponse(void)
+{
+	respBuffer.error.length = sizeof respBuffer.error;
+	respBuffer.error.response = respError;
+	respBuffer.error.error_code = respErrTimeoutExpired;
+}
+
 static void writeFlash(void)
 {
 	// set WEN and INFEN
@@ -168,7 +177,10 @@ static void writeFlash(void)
 	
 	// do the programming of PROG_CHUNK_SIZE bytes
 	ProgSpiPROGRAM(reqBuffer.writeFlash.address, reqBuffer.writeFlash.data);
-	ProgSpiWaitForRDYN();
+	
+	// wait for confirmation
+	if (!ProgSpiWaitForRDYN(PROGRAM_CHUNK_TIMEOUT))
+		setTimeoutResponse();
 }
 
 static void erasePage(void)
@@ -181,12 +193,13 @@ static void erasePage(void)
 		ProgSpiWRSR(fsr | _BV(FSR_INFEN));
 
 	ProgSpiERASE_PAGE(reqBuffer.erasePage.page_num);
-	ProgSpiWaitForRDYN();
+	if (!ProgSpiWaitForRDYN(ERASE_PAGE_TIMEOUT))
+		setTimeoutResponse();
 }
 
 void prgValidate(void)
 {
-	// set the default response header
+	// set the default (optimistic) response header
 	respBuffer.simple.length = sizeof respBuffer.simple;
 	respBuffer.simple.response = reqBuffer.simple.request | 0x80;
 	
@@ -198,11 +211,11 @@ void prgValidate(void)
 		respBuffer.ver.ver_minor = PRG_VER_MINOR;
 		break;
 
-	case reqProgSpiBegin:
+	case reqProgBegin:
 		ProgSpiBegin();
 		break;
 
-	case reqProgSpiEnd:
+	case reqProgEnd:
 		ProgSpiEnd();
 		break;
 
@@ -225,7 +238,8 @@ void prgValidate(void)
 	case reqEraseAll:
 		ProgSpiWREN();
 		ProgSpiERASE_ALL();
-		ProgSpiWaitForRDYN();
+		if (!ProgSpiWaitForRDYN(ERASE_ALL_TIMEOUT))
+			setTimeoutResponse();
 		break;
 		
 	case reqErasePageMB:
@@ -236,13 +250,15 @@ void prgValidate(void)
 	case reqDisReadMainBlock:
 		ProgSpiWREN();
 		ProgSpiRDISMB();
-		ProgSpiWaitForRDYN();
+		if (!ProgSpiWaitForRDYN(1))
+			setTimeoutResponse();
 		break;
 		
 	case reqDisReadInfoPage:
 		ProgSpiWREN();
 		ProgSpiRDISIP();
-		ProgSpiWaitForRDYN();
+		if (!ProgSpiWaitForRDYN(1))
+			setTimeoutResponse();
 		break;
 	}
 

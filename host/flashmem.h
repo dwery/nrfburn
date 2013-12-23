@@ -5,7 +5,7 @@ class FlashMemory
 {
 private:
 	enum {
-		MAX_HEX_FILE_SIZE	= 0x20000,	// 128kByte
+		MAX_HEX_FILE_SIZE	= 0x20000,	// 128kByte for the Intel HEX format file
 		BYTES_PER_ROW		= 0x10,		// how bay data bytes per row in HEX output
 	};
 
@@ -17,7 +17,7 @@ private:
 	std::auto_ptr<uint8_t>	flashBuffer;
 
 public:
-	FlashMemory(const int fs);
+	explicit FlashMemory(const int fs);
 
 	void LoadHex(const std::string& filename);
 	void SaveHex(const std::string& filename) const;
@@ -30,8 +30,20 @@ public:
 		return flashBuffer.get();
 	}
 	
+	const uint8_t* GetFlash() const
+	{
+		return flashBuffer.get();
+	}
+	
 	int GetFlashSize() const
 	{
 		return flashSize;
+	}
+	
+	// compare flashes - used for verification
+	const bool operator == (const FlashMemory& lhs) const;
+	const bool operator != (const FlashMemory& lhs) const
+	{
+		return !(operator == (lhs));
 	}
 };

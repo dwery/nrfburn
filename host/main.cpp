@@ -12,13 +12,15 @@
 
 void PrintHelp()
 {
-	printf("nrfburn v0.01\n");
+	printf("nrfburn v0.01   build %s %s\n", __DATE__, __TIME__);
 	printf("Usage: nrfburn [options]\n");
 	printf("Options:\n");
 	printf("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.\n");
 	printf("                   Default is 16kB.\n");
 	printf("  -w <filename>    Write contents of HEX file to nRF24LU1+ MainBlock flash.\n");
 	printf("                   Automatically performs a chip erase before programming.\n");
+	printf("                   Does a verification pass after writing is complete.\n");
+	printf("  -v               Skip the flash write verification.\n");
 	printf("  -r <filename>    Read nRF24LU1+ MainBlock into HEX file.\n");
 	printf("  -p <filename>    Read nRF24LU1+ InfoPage into HEX file.\n");
 	printf("  -e               Perform a chip erase.\n");
@@ -37,9 +39,10 @@ struct Options
 	std::string		ChipID;
 	int				FlashSize;
 	bool			EraseAll;
+	bool			DoVerify;
 
 	Options()
-		: FlashSize(16*1024), EraseAll(false)
+		: FlashSize(16*1024), EraseAll(false), DoVerify(true)
 	{}
 };
 
@@ -109,6 +112,9 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 				throw std::string("ChipID not specified.");
 
 			break;
+		case 'v':
+			opt.DoVerify = false;
+			break;
 		default:
 			throw std::string("Invalid command line option: -") + argv[c][1];
 			break;
@@ -134,7 +140,23 @@ void printProgressWrite(const bool is_init, const double progress)
 	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
 
 	std::string hashes(size_t(progress * 50), '#');
-	printf("\rFlashing | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
+	printf("\rFlashing  | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
+	fflush(stdout);
+}
+
+void printProgressVerify(const bool is_init, const double progress)
+{
+	static clock_t time_begin;
+	if (is_init)
+	{
+		puts("");
+		time_begin = clock();
+	}
+
+	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
+
+	std::string hashes(size_t(progress * 50), '#');
+	printf("\rVerifying | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
 	fflush(stdout);
 }
 
@@ -147,7 +169,7 @@ void printProgressRead(const bool is_init, const double progress)
 	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
 
 	std::string hashes(size_t(progress * 50), '#');
-	printf("\rReading  | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
+	printf("\rReading   | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
 	fflush(stdout);
 }
 
@@ -155,10 +177,13 @@ void DoProg(const Options& opt)
 {
 	// open the port
 	Programmer prg(opt.FlashSize);
+
+	printf("\nOpening programmer and reading Flash registers\n");
+
 	prg.Open();
 
 	// print the FSR and FPCR
-	printf("\nnRF24LU1+ flash registers:\n");
+	printf("\nnRF device flash registers:\n");
 	printf("FPCR = 0x%02x\n", prg.GetFPCR());
 	printf("FSR  = 0x%02x    DBG=%i  STP=%i  RDISMB=%i  RDISIP=%i\n",
 					prg.GetFSR(),
@@ -167,20 +192,25 @@ void DoProg(const Options& opt)
 					prg.GetFSR() & (1<<FSR_RDISMB) ? 1 : 0,
 					prg.GetFSR() & (1<<FSR_RDISIP) ? 1 : 0);
 
-	printf("\nMainBlock readback %s\nInfoPage readback %s\n",
-					prg.GetFSR() & (1<<FSR_RDISMB) ? "disabled" : "enabled",
-					prg.GetFSR() & (1<<FSR_RDISIP) ? "disabled" : "enabled");
+	printf("\nMainBlock readback %s\nInfoPage readback %s\n\n",
+					prg.CanReadMainBlock() ? "enabled" : "disabled",
+					prg.CanReadInfoPage() ? "enabled" : "disabled");
 
+	// check if the target nRF device is present.
+	// if the nRF is not present, we will read the FSR register as 0xff.
+	// 0xff is not a valid value on a powered nRF, because bit 0 is always
+	// read as 0.
+	if (!prg.IsTargetPresent())
+		throw std::string("FSR == 0xff. Target device not found.");
+	
 	if (opt.EraseAll)
 	{
 		prg.EraseAll();
 	} else if (!opt.WriteMBFrom.empty()) {
-		puts("");
-		prg.WriteMainBlock(opt.WriteMBFrom, printProgressWrite);
+		prg.WriteMainBlock(opt.WriteMBFrom, opt.DoVerify, printProgressWrite, printProgressVerify);
 
 		printf("\n\nMainBlock flash written from %s\n", opt.WriteMBFrom.c_str());
 	} else if (!opt.ReadMBInto.empty()) {
-		puts("");
 		prg.ReadMainBlock(opt.ReadMBInto, printProgressRead);
 
 		printf("\n\nMainBlock contents saved into %s\n", opt.ReadMBInto.c_str());

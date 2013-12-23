@@ -47,8 +47,14 @@ void Programmer::ReadResponse(Resp& resp)
 	if (sum)
 		throw std::string("Programmer to host communication error - bad checksum.");
 
-	if (pResp->response == respBadChecksum)
-		throw std::string("Host to programmer communication error - bad checksum.");
+	if (pResp->response == respError)
+	{
+		resp_error_t* pRespErr = (resp_error_t*) buff;
+		if (pRespErr->error_code == respErrBadChecksum)
+			throw std::string("Host to programmer communication error - bad checksum.");
+		else if (pRespErr->error_code == respErrTimeoutExpired)
+			throw std::string("Programmer timeout expired -- check connection.");
+	}
 
 	if (pResp->length != sizeof resp)
 		throw std::string("Unexpected response from programmer.");
@@ -195,23 +201,17 @@ void Programmer::EraseAll()
 		throw std::string("Unexpected response from programmer in EraseAll()");
 }
 
-void Programmer::WriteChunk(const bool isInfoPage, const int offset)
+void Programmer::WriteChunk(const bool isInfoPage, const FlashMemory& flash, const int offset)
 {
-	if (offset > (isInfoPage ? infoPage.GetFlashSize() : mainBlock.GetFlashSize()) + PROG_CHUNK_SIZE)
-		throw std::string("Bad InfoPage offset in WriteChunk()");
+	if (offset + PROG_CHUNK_SIZE > flash.GetFlashSize())
+		throw std::string("Offset outside available flash in WriteChunk()");
 
 	// send WriteFlash request
 	req_write_flash_t req;
 	req.length = sizeof req;
 	req.address = offset;
-	if (isInfoPage)
-	{
-		memcpy(req.data, infoPage.GetFlash() + offset, PROG_CHUNK_SIZE);
-		req.request = reqWriteInfoPage;
-	} else {
-		memcpy(req.data, mainBlock.GetFlash() + offset, PROG_CHUNK_SIZE);
-		req.request = reqWriteMainBlock;
-	}
+	memcpy(req.data, flash.GetFlash() + offset, PROG_CHUNK_SIZE);
+	req.request = isInfoPage ? reqWriteInfoPage : reqWriteMainBlock;
 	reqSetChecksum(req);
 	hidBurn.Write(req);
 
@@ -223,10 +223,10 @@ void Programmer::WriteChunk(const bool isInfoPage, const int offset)
 		throw std::string("Unexpected response from programmer in WriteChunk()");
 }
 
-void Programmer::ReadChunk(const bool isInfoPage, const int offset)
+void Programmer::ReadChunk(const bool isInfoPage, FlashMemory& flash, const int offset)
 {
-	if (offset > (isInfoPage ? infoPage.GetFlashSize() : mainBlock.GetFlashSize()) + PROG_CHUNK_SIZE)
-		throw std::string("Bad InfoPage offset in ReadChunk()");
+	if (offset + PROG_CHUNK_SIZE > flash.GetFlashSize())
+		throw std::string("Offset outside available flash in ReadChunk()");
 
 	// send WriteFlash request
 	req_read_flash_t req;
@@ -243,83 +243,77 @@ void Programmer::ReadChunk(const bool isInfoPage, const int offset)
 	if (resp.response != req2resp(req.request))
 		throw std::string("Unexpected response from programmer in ReadChunk()");
 
-	// copy the chunk to the appropriate flash object
-	if (isInfoPage)
-		memcpy(infoPage.GetFlash() + offset, resp.data, PROG_CHUNK_SIZE);
-	else
-		memcpy(mainBlock.GetFlash() + offset, resp.data, PROG_CHUNK_SIZE);
+	// copy the chunk to the flash object
+	memcpy(flash.GetFlash() + offset, resp.data, PROG_CHUNK_SIZE);
 }
 
 void Programmer::ReadMainBlock(const std::string& hexfilename, ProgressCallback printProgress)
 {
 	// is MainBlock readback disabled?
-	if (fsr & (1<<FSR_RDISMB))
+	if (!CanReadMainBlock())
 		throw std::string("MainBlock readback is disabled by the chip config.");
 
-	mainBlock.Clear();
+	FlashMemory flash(flashSize);
 
 	// init the progress bar
 	if (printProgress)
 		printProgress(true, 0);
 
 	int address = 0;
-	while (address < mainBlock.GetFlashSize())
+	while (address < flash.GetFlashSize())
 	{
-		ReadChunk(false, address);
+		ReadChunk(false, flash, address);
 
 		address += PROG_CHUNK_SIZE;
 
 		// update the progress bar
 		if (printProgress)
-			printProgress(false, address / double(mainBlock.GetFlashSize()));
+			printProgress(false, address / double(flash.GetFlashSize()));
 	}
 
 	// now save everything
-	mainBlock.SaveHex(hexfilename);
+	flash.SaveHex(hexfilename);
 }
 
 void Programmer::ReadInfoPage(const std::string& hexfilename)
 {
 	// is MainBlock readback disabled?
-	if (fsr & (1<<FSR_RDISIP))
+	if (!CanReadInfoPage())
 		throw std::string("InfoPage readback is disabled by the chip config.");
 
-	infoPage.Clear();
+	FlashMemory flash(InfoPageSize);
 
 	int address = 0;
-	while (address < infoPage.GetFlashSize())
+	while (address < flash.GetFlashSize())
 	{
-		ReadChunk(true, address);
+		ReadChunk(true, flash, address);
 		address += PROG_CHUNK_SIZE;
 	}
 
 	// now save everything
-	infoPage.SaveHex(hexfilename);
+	flash.SaveHex(hexfilename);
 }
 
-void Programmer::WriteMainBlock(const std::string& hexfilename, ProgressCallback printProgress)
+void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verify, ProgressCallback printWriteProgress, ProgressCallback printVerifyProgress)
 {
-	mainBlock.LoadHex(hexfilename);		// read the HEX file
+	FlashMemory flash(flashSize);
+	
+	flash.LoadHex(hexfilename);		// read the HEX file
 
 	// init the progress bar
-	if (printProgress)
-		printProgress(true, 0);
+	if (printWriteProgress)
+		printWriteProgress(true, 0);
 
 	EraseAll();			// erase the chip's MainBlock
 
 	// start writing the flash
-	const uint8_t* pFlash = mainBlock.GetFlash();
-
 	int address = 0;
-	int bytes;
-	const uint8_t* pChunk;
-	while (address < mainBlock.GetFlashSize())
+	while (address < flash.GetFlashSize())
 	{
-		pChunk = pFlash + address;
-		bytes = 0;
+		const uint8_t* pChunk = flash.GetFlash() + address;
 
 		// do we have a non-empty block?
-		int c;
+		int bytes = 0, c;
 		for (c = 0; c < PROG_CHUNK_SIZE; c++)
 		{
 			if (pChunk[bytes] != 0xff)
@@ -329,14 +323,40 @@ void Programmer::WriteMainBlock(const std::string& hexfilename, ProgressCallback
 		if (bytes)
 		{
 			// yes, we do have a non-empty block
-			WriteChunk(false, address);
+			WriteChunk(false, flash, address);
 		}
 
 		address += PROG_CHUNK_SIZE;
 
 		// update the progress bar
-		if (printProgress)
-			printProgress(false, address / double(mainBlock.GetFlashSize()));
+		if (printWriteProgress)
+			printWriteProgress(false, address / double(flash.GetFlashSize()));
+	}
+	
+	// run a verify if requested
+	if (verify)
+	{
+		// init the progress bar
+		if (printVerifyProgress)
+			printVerifyProgress(true, 0);
+
+		FlashMemory verifyFlash(flashSize);
+
+		int address = 0;
+		while (address < flashSize)
+		{
+			ReadChunk(false, verifyFlash, address);
+
+			address += PROG_CHUNK_SIZE;
+
+			// update the progress bar
+			if (printVerifyProgress)
+				printVerifyProgress(false, address / double(flashSize));
+		}
+
+		// now compare
+		if (flash != verifyFlash)
+			throw std::string("Verification failed.");
 	}
 }
 
