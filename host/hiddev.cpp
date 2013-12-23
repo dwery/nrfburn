@@ -20,6 +20,13 @@
 #define USBOPEN_ERR_NOTFOUND    3   	// device not found
 
 
+#ifdef DEBUG
+#define DEBUG_PRINT(arg)    printf arg
+#else
+#define DEBUG_PRINT(arg)
+#endif
+
+
 /* ######################################################################## */
 #ifdef WIN32 /* ******##################################################### */
 /* ######################################################################## */
@@ -29,12 +36,6 @@
 
 #include "hidsdi_loc.h"
 #include <ddk/hidpi.h>
-
-#ifdef DEBUG
-#define DEBUG_PRINT(arg)    printf arg
-#else
-#define DEBUG_PRINT(arg)
-#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -313,7 +314,7 @@ int usbhidOpenDevice(usbDevice_t** device, int vendor, char* vendorName, int pro
 	if (handle != NULL)
 	{
 		errorCode = USBOPEN_SUCCESS;
-		*device = (void*)handle;
+		*device = (usbDevice_t*)handle;
 	}
 		
 	return errorCode;
@@ -322,14 +323,14 @@ int usbhidOpenDevice(usbDevice_t** device, int vendor, char* vendorName, int pro
 void usbhidCloseDevice(usbDevice_t* device)
 {
 	if (device != NULL)
-		usb_close((void*)device);
+		usb_close((usb_dev_handle*)device);
 }
 
 int usbhidSetReport(usbDevice_t* device, char* buffer, int len)
 {
 	int bytesSent, reportId = buffer[0];
 
-	bytesSent = usb_control_msg((void*)device, USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_ENDPOINT_OUT, USBRQ_HID_SET_REPORT, USB_HID_REPORT_TYPE_FEATURE << 8 | (reportId & 0xff), 0, buffer, len, 5000);
+	bytesSent = usb_control_msg((usb_dev_handle*)device, USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_ENDPOINT_OUT, USBRQ_HID_SET_REPORT, USB_HID_REPORT_TYPE_FEATURE << 8 | (reportId & 0xff), 0, buffer, len, 5000);
 	if (bytesSent != len)
 	{
 		if (bytesSent < 0)
@@ -345,7 +346,7 @@ int usbhidGetReport(usbDevice_t* device, int reportNumber, char* buffer, int* le
 {
 	int bytesReceived, maxLen = *len;
 
-	bytesReceived = usb_control_msg((void*)device, USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_ENDPOINT_IN, USBRQ_HID_GET_REPORT, USB_HID_REPORT_TYPE_FEATURE << 8 | reportNumber, 0, buffer, maxLen, 5000);
+	bytesReceived = usb_control_msg((usb_dev_handle*)device, USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_ENDPOINT_IN, USBRQ_HID_GET_REPORT, USB_HID_REPORT_TYPE_FEATURE << 8 | reportNumber, 0, buffer, maxLen, 5000);
 	if (bytesReceived < 0)
 	{
 		DEBUG_PRINT(("Error sending message: %s\n", usb_strerror()));
