@@ -23,11 +23,12 @@ void PrintHelp()
 	printf("  -v               Skip the flash write verification.\n");
 	printf("  -r <filename>    Read nRF target MainBlock into HEX file.\n");
 	printf("  -p <filename>    Read nRF target InfoPage into HEX file.\n");
-	printf("  -e               Perform a chip erase.\n");
-	printf("                   This erases only the MainBlock, and leaves the InfoPage intact.\n");
+	printf("  -e               Perform a chip erase. This erases only the MainBlock, \n");
+	printf("                   and leaves the InfoPage intact.\n");
 	printf("  -i <chipID>      Erase the InfoPage and write the specified chip ID.\n");
 	printf("                   This also performs a chip erase.\n");
-	printf("                   chipID must be in the format xx-xx-xx-xx-xx where x is a hex digit.\n");
+	printf("                   chipID must be in the format xx-xx-xx-xx-xx\n");
+	printf("                   where x is a hex digit.\n");
 	printf("\n");
 }
 
