@@ -12,10 +12,10 @@ void ProgSpiEnd(void);
 // reads FSR until FSR.RDYN is clear
 bool ProgSpiWaitForRDYN(uint8_t timeout_ms);
 
-// default timeouts - should be just enough for a 16MHz CLK
-#define ERASE_ALL_TIMEOUT		30
-#define ERASE_PAGE_TIMEOUT		30
-#define PROGRAM_CHUNK_TIMEOUT	5
+// default timeouts - should be more than enough for a 16MHz CLK
+#define ERASE_ALL_TIMEOUT		150
+#define ERASE_PAGE_TIMEOUT		150
+#define PROGRAM_CHUNK_TIMEOUT	50
 
 // write enable/disable - datasheet 17.7.1.1
 void ProgSpiWREN(void);

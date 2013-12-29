@@ -29,7 +29,7 @@ void init_hw(void)
 	
 	progParseInit();	// init the programming protocol interface
 
-	ProgSpiInit();			// init the programming hardware (SPI and the rest of the pins)
+	ProgSpiInit();		// init the programming hardware (SPI and the rest of the pins)
 	
 	// setup v-usb
 	usbInit();
@@ -47,28 +47,10 @@ int main(void)
 	
 	for (;;)
 	{
+		// poll the V-USB library
 		usbPoll();
 		
+		// handle the requests, and create responses
 		progParsePoll();
-
-		/*
-		// new character?
-		if (uartHasRecvByte())
-			progParseSetRxByte(UDR0);
-
-		progParsePoll();
-
-		// anything to send?
-		if (progParseGetTxCount())
-		{
-			// send it all
-			int c;
-			while ((c = progParseGetTxByte()) != -1)
-			{
-				loop_until_bit_is_set(UCSR0A, UDRE0);
-				UDR0 = c;
-			}
-		}
-		*/
 	}
 }

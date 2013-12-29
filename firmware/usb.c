@@ -41,11 +41,6 @@ bool isFirstPacket;			// if this is true it means the first byte of the packet i
 // usbFunctionRead() is called when the host requests a chunk of data from the device.
 uchar usbFunctionRead(uchar* data, uchar len)
 {
-	//SetBit(PORT(LED1_PORT), LED1_BIT);
-
-	/*uartPutChar('r');
-	uartPutChar('0' + len);*/
-
 	// first clear the buffer
 	memset(data, 0, len);
 	
@@ -60,17 +55,12 @@ uchar usbFunctionRead(uchar* data, uchar len)
 			bytes2send = avail2send;
 
 		if (isFirstPacket)
-		{
-			//uartPutChar(reportId);
 			*data++ = reportId;
-		}
 
 		int c;
 		for (c = 0; c < bytes2send; ++c)
-		{
 			data[c] = (uchar) progParseGetTxByte();
-			//uartPutChar(data[c]);
-		}
+
 	} else {
 		// set the report ID
 		if (isFirstPacket)
@@ -85,16 +75,10 @@ uchar usbFunctionRead(uchar* data, uchar len)
 // usbFunctionWrite() is called when the host sends a chunk of data to the device.
 uchar usbFunctionWrite(uchar* data, uchar len)
 {
-	//SetBit(PORT(LED2_PORT), LED2_BIT);
-
-	/*uartPutChar('w');
-	uartPutChar('0' + len);*/
-
 	bytesRemaining -= len;
 
 	if (isFirstPacket)
 	{
-		//uartPutChar(reportId);
 		*data++ = reportId;
 		--len;
 	}
@@ -103,7 +87,6 @@ uchar usbFunctionWrite(uchar* data, uchar len)
 	{
 		uint8_t c = *data++;
 		progParseSetRxByte(c);
-		//uartPutChar(c);
 	}
 
 	isFirstPacket = false;
@@ -120,8 +103,6 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
 		if (rq->bRequest == USBRQ_HID_GET_REPORT
 				||  rq->bRequest == USBRQ_HID_SET_REPORT)
 		{
-			// SetBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
-			
 			isFirstPacket = true;
 			reportId = rq->wValue.bytes[0];
 

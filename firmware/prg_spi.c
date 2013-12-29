@@ -60,12 +60,23 @@ static void ProgDisableSPI(void)
 	ClrBit(PORT(MISO_PORT), MISO_BIT);
 }
 
+static void ProgSpiResetTarget(void)
+{
+	ClrBit(PORT(TGT_RST_PORT), TGT_RST_BIT);
+	_delay_ms(1);
+	SetBit(PORT(TGT_RST_PORT), TGT_RST_BIT);
+}
+
 // setup the programming interface pins
 void ProgSpiInit(void)
 {
-	// config the PROG pin for output and drive it high
-	SetBit(PORT(PROG_PORT), PROG_BIT);
+	// drive the PROG pin low
+	ClrBit(PORT(PROG_PORT), PROG_BIT);
 	SetBit(DDR(PROG_PORT), PROG_BIT);
+	
+	// drive the TGT_RST pin high
+	SetBit(PORT(TGT_RST_PORT), TGT_RST_BIT);
+	SetBit(DDR(TGT_RST_PORT), TGT_RST_BIT);
 
 	ProgDisableSPI();
 }
@@ -80,12 +91,13 @@ void ProgSpiBegin(void)
 	SetBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
 
 	ProgEnableSPI();
+	
+	ProgSpiResetTarget();
 
 	// PROG goes high - enable programming
 	SetBit(PORT(PROG_PORT), PROG_BIT);
 	
-	// wait 2ms
-	_delay_ms(2);
+	_delay_ms(2);	// wait 2ms
 }
 
 void ProgSpiEnd(void)
@@ -97,10 +109,12 @@ void ProgSpiEnd(void)
 	// turn off the programming indicator LED
 	ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
 
-	// PROG goes low to end programming
+	// PROG driven low
 	ClrBit(PORT(PROG_PORT), PROG_BIT);
-
+	
 	ProgDisableSPI();
+
+	ProgSpiResetTarget();
 }
 
 static void ProgSpiShiftCommand(uint8_t* pCommand, uint8_t num_bytes)
@@ -187,7 +201,7 @@ void ProgSpiWRSR(const uint8_t fsr_val)
 	ProgSpiShiftCommand(cmd, sizeof cmd);
 }
 
-// reads 256 bytes of flash memory, starting from the given address - datasheet 17.7.1.4
+// reads PROG_CHUNK_SIZE bytes of flash memory, starting from the given address - datasheet 17.7.1.4
 void ProgSpiREAD(const uint16_t addr, uint8_t* data)
 {
 	// start command - CSN goes low
@@ -207,7 +221,7 @@ void ProgSpiREAD(const uint16_t addr, uint8_t* data)
 	SetBit(PORT(CSN_PORT), CSN_BIT);
 }
 
-// writes 256 bytes of flash memory, starting from the given address - datasheet 17.7.1.5
+// writes PROG_CHUNK_SIZE bytes of flash memory, starting from the given address - datasheet 17.7.1.5
 void ProgSpiPROGRAM(const uint16_t addr, const uint8_t* data)
 {
 	// start command - CSN goes low
@@ -268,7 +282,7 @@ void ProgSpiRDISMB(void)
 bool ProgSpiWaitForRDYN(uint8_t timeout_ms)
 {
 	do {
-		if (ProgSpiRDSR() & _BV(FSR_RDYN))
+		if ((ProgSpiRDSR() & _BV(FSR_RDYN)) == 0)
 			return true;
 
 		if (timeout_ms)

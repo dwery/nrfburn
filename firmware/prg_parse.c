@@ -150,12 +150,6 @@ static void readFlash(void)
 {
 	respBuffer.readFlash.length = sizeof respBuffer.readFlash;
 
-	uint8_t fsr = ProgSpiRDSR() & _BV(FSR_DBG);
-	if (reqBuffer.simple.request == reqReadMainBlock)
-		ProgSpiWRSR(fsr);
-	else
-		ProgSpiWRSR(fsr | _BV(FSR_INFEN));
-
 	ProgSpiREAD(reqBuffer.readFlash.address, respBuffer.readFlash.data);
 }
 

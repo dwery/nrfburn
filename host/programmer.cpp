@@ -17,7 +17,7 @@ void Programmer::ReadResponse(Resp& resp)
 	resp_simple_t* pResp = (resp_simple_t*) buff;
 
 	int cnt = 0;
-	while (cnt < 5)
+	while (cnt < 15)
 	{
 		hidBurn.ReadFirst(buff);
 

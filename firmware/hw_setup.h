@@ -2,13 +2,13 @@
 
 // LEDs
 #define LED_PROG_PORT	C
-#define LED_PROG_BIT	0
+#define LED_PROG_BIT	1
 
 #define LED1_PORT		C
-#define LED1_BIT		1
+#define LED1_BIT		2
 
 #define LED2_PORT		C
-#define LED2_BIT		2
+#define LED2_BIT		3
 
 
 // the nRF24LU1+ programming interface
@@ -26,3 +26,6 @@
 
 #define MISO_PORT		B
 #define MISO_BIT		4
+
+#define TGT_RST_PORT	C
+#define TGT_RST_BIT		0
