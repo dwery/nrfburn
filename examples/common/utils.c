@@ -19,4 +19,3 @@ void delay_ms(uint16_t ms)
 		delay_us(1000);
 	} while (--ms);
 }
-

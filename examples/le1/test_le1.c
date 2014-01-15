@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 
 #include "reg24le1.h"
@@ -40,15 +41,15 @@ void main()
 {
 	P0DIR = 0x00;
 
-	uart_init();
+	//uart_init();
 	
 	while (1)
 	{
-		P07 = 1;
-		delay_us(300);
-
-		P07 = 0;
-		delay_us(200);
+		P05 = 1;
+		delay_us(500);
+		
+		P05 = 0;
+		delay_us(100);
 		
 		//printf("asd %i\n", 12);
 	}

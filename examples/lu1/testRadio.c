@@ -4,7 +4,7 @@
 
 //#include "nRF24L.h"
 #include "reg24lu1.h"
-
+/*
 void delay_us(uint16_t us)
 {
 	do {
@@ -60,7 +60,7 @@ void putchar(char c)
     TI0 = 0;
     S0BUF = c;
 }
-
+*/
 /*
 void main()
 {
