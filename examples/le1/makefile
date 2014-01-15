@@ -2,14 +2,14 @@ TARGET   = test_le1.ihx
 CFLAGS   = --model-small -I../common
 LFLAGS   = --code-loc 0x0000 --code-size 0x4000 --xram-loc 0x0000 --xram-size 0x400
 ASFLAGS  = -plosgff
-RELFILES = crtxinit.rel utils.rel
+RELFILES = test_le1.rel crtxinit.rel utils.rel
 
 VPATH   = ../common
 
 main: $(TARGET)
 
-$(TARGET): test_le1.c $(RELFILES)
-	sdcc $(CFLAGS) $(LFLAGS) test_le1.c $(RELFILES) -o $(TARGET)
+$(TARGET): $(RELFILES)
+	sdcc $(CFLAGS) $(LFLAGS) $(RELFILES) -o $(TARGET)
 
 %.rel: %.c
 	sdcc $(CFLAGS) -c $<

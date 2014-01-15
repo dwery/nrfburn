@@ -2,14 +2,14 @@ TARGET   = testRadio.ihx
 CFLAGS   = --model-small -I../common
 LFLAGS   = --code-loc 0x0000 --code-size 0x4000 --xram-loc 0x8000 --xram-size 0x800
 ASFLAGS  = -plosgff
-RELFILES = crtxinit.rel
+RELFILES = testRadio.rel crtxinit.rel
 
 VPATH    = ../common
 
 main: $(TARGET)
 
-$(TARGET): testRadio.c $(RELFILES)
-	sdcc $(CFLAGS) $(LFLAGS) testRadio.c $(RELFILES) -o $(TARGET)
+$(TARGET): $(RELFILES)
+	sdcc $(CFLAGS) $(LFLAGS) $(RELFILES) -o $(TARGET)
 
 %.rel: %.c
 	sdcc $(CFLAGS) -c $<
