@@ -202,7 +202,7 @@ __sbit __at 0xC5 WUF;
 __sbit __at 0xC4 MISCF;
 __sbit __at 0xC3 WUPINF;
 __sbit __at 0xC2 SPIF;
-__sbit __at 0xC1 RFF;		// RFIRQ
+__sbit __at 0xC1 RFIRQ;
 __sbit __at 0xC0 RFSPIF;	// RFRDY
 
 // PORT0-3

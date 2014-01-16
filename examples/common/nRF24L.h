@@ -1,5 +1,14 @@
 #pragma once
 
+/*
+
+This contains functions which that enable a single interface for handing the RF module
+on Nordic nRF24L01+, nRF24LE1 and  nRF24LU1+ chips. The code assumes that the nRF24L01+ 
+is connected to the SPI of a Atmel AVR microcontroller.
+
+*/
+
+
 // definitions for selecting and enabling nRF module
 #ifdef AVR
 # include <avr/io.h>
@@ -12,7 +21,15 @@
 # define nRF_CE_hi()		SetBit(PORT(NRF_CE_PORT), NRF_CE_BIT)
 # define nRF_CE_lo()		ClrBit(PORT(NRF_CE_PORT), NRF_CE_BIT)
 #else
-# include "reg24lu1.h"
+# ifdef NRF24LE1
+#  include "reg24le1.h"
+#  define nRF_SPI_Write(val)		SPIRDAT = val
+# elif defined(NRF24LU1)
+#  include "reg24lu1.h"
+#  define nRF_SPI_Write(val)		RFDAT = val
+# else
+#  error "Please specify target by defining either NRF24LE1 or NRF24LU1."
+# endif
 # define nRF_CSN_hi()		RFCSN = 1
 # define nRF_CSN_lo()		RFCSN = 0
 # define nRF_CE_hi()		RFCE = 1

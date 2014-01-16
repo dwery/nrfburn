@@ -253,11 +253,9 @@ void Programmer::ReadMainBlock(const std::string& hexfilename, ProgressCallback 
 	if (!CanReadMainBlock())
 		throw std::string("MainBlock readback is disabled by the chip config.");
 
-	FlashMemory flash(flashSize);
+	ProgressHandler progress(printProgress);
 
-	// init the progress bar
-	if (printProgress)
-		printProgress(true, 0);
+	FlashMemory flash(flashSize);
 
 	int address = 0;
 	while (address < flash.GetFlashSize())
@@ -268,7 +266,7 @@ void Programmer::ReadMainBlock(const std::string& hexfilename, ProgressCallback 
 
 		// update the progress bar
 		if (printProgress)
-			printProgress(false, address / double(flash.GetFlashSize()));
+			printProgress(CB_Progress, address / double(flash.GetFlashSize()));
 	}
 
 	// now save everything
@@ -300,46 +298,42 @@ void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verif
 	
 	flash.LoadHex(hexfilename);		// read the HEX file
 
-	// init the progress bar
-	if (printWriteProgress)
-		printWriteProgress(true, 0);
-
-	EraseAll();			// erase the chip's MainBlock
-
-	// start writing the flash
-	int address = 0;
-	while (address < flash.GetFlashSize())
+	// do the flash writing
 	{
-		const uint8_t* pChunk = flash.GetFlash() + address;
+		ProgressHandler writeProgress(printWriteProgress);
 
-		// do we have a non-empty block?
-		int bytes = 0, c;
-		for (c = 0; c < PROG_CHUNK_SIZE; c++)
+		EraseAll();			// erase the chip's MainBlock
+
+		// start writing the flash
+		int address = 0;
+		while (address < flash.GetFlashSize())
 		{
-			if (pChunk[bytes] != 0xff)
-				bytes = c + 1;
+			const uint8_t* pChunk = flash.GetFlash() + address;
+
+			// do we have a non-empty block?
+			int bytes = 0, c;
+			for (c = 0; c < PROG_CHUNK_SIZE; c++)
+			{
+				if (pChunk[bytes] != 0xff)
+					bytes = c + 1;
+			}
+
+			// do we have a non-empty block?
+			if (bytes)
+				WriteChunk(false, flash, address);
+
+			address += PROG_CHUNK_SIZE;
+
+			// update the progress bar
+			writeProgress(address / double(flash.GetFlashSize()));
 		}
-
-		if (bytes)
-		{
-			// yes, we do have a non-empty block
-			WriteChunk(false, flash, address);
-		}
-
-		address += PROG_CHUNK_SIZE;
-
-		// update the progress bar
-		if (printWriteProgress)
-			printWriteProgress(false, address / double(flash.GetFlashSize()));
 	}
-	
+		
 	// run a verify if requested
 	if (verify)
 	{
-		// init the progress bar
-		if (printVerifyProgress)
-			printVerifyProgress(true, 0);
-
+		ProgressHandler verifyProgress(printVerifyProgress);
+		
 		FlashMemory verifyFlash(flashSize);
 
 		int address = 0;
@@ -350,8 +344,7 @@ void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verif
 			address += PROG_CHUNK_SIZE;
 
 			// update the progress bar
-			if (printVerifyProgress)
-				printVerifyProgress(false, address / double(flashSize));
+			verifyProgress(address / double(flashSize));
 		}
 
 		// now compare

@@ -1,8 +1,8 @@
 TARGET   = test_le1.ihx
-CFLAGS   = --model-small -I../common
+CFLAGS   = --model-small -I../common -DNRF24LE1
 LFLAGS   = --code-loc 0x0000 --code-size 0x4000 --xram-loc 0x0000 --xram-size 0x400
 ASFLAGS  = -plosgff
-RELFILES = test_le1.rel crtxinit.rel utils.rel
+RELFILES = test_le1.rel nRF24L.rel crtxinit.rel utils.rel
 
 VPATH   = ../common
 

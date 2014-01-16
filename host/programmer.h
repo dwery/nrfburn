@@ -6,6 +6,11 @@
 
 class Programmer
 {
+public:
+	enum CallbackPhase {CB_Init, CB_Progress, CB_End};
+	
+	typedef void (*ProgressCallback)(const CallbackPhase phase, const double progress);
+
 private:
 	HIDBurner	hidBurn;		// the programmer communication
 
@@ -31,9 +36,33 @@ private:
 		InfoPageSize = 512,
 	};
 	
-public:
-	typedef void (*ProgressCallback)(const bool is_init, const double progress);
+	// helper class - used to relay calls to the progress callback
+	// and handle the init/end phase of the callback process
+	struct ProgressHandler
+	{
+		ProgressCallback callback;
+		
+		ProgressHandler(ProgressCallback cb)
+			: callback(cb)
+		{
+			if (callback)
+				callback(CB_Init, 0);
+		}
 
+		void operator () (const double progress)
+		{
+			if (callback)
+				callback(CB_Progress, progress);
+		}
+		
+		~ProgressHandler()
+		{
+			if (callback)
+				callback(CB_End, 0);
+		}
+	};
+	
+public:
 	Programmer(const int fs)
 	:	fsr(0), fpcr(0), flashSize(fs), needsProgEnd(false)
 	{}

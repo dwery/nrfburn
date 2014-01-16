@@ -49,7 +49,12 @@ void nRF_Init(void)
 
 void nRF_Init(void)
 {
+# ifdef NRF24LU1
 	RFCTL = 0x11;	// enable SPI, 1/2 clock
+# endif
+
+	// nRF24LE1 has the internal SPI always enabled
+
 	RFCON = 0x04;	// enable RF clock, CSN low, CE low
 }
 
@@ -58,14 +63,30 @@ void nRF_Init(void)
 static uint8_t nRF_SpiShiftByte(uint8_t byte)
 {
 #ifdef AVR		
-	SPDR = byte;		// set character to send the nRF through MOSI
+	SPDR = byte;			// set byte to send the nRF through MOSI
 	loop_until_bit_is_set(SPSR, SPIF);	// wait until char is sent
-	byte = SPDR;		// remember the byte received from nRF through MISO
-#else		
-	RFDAT = byte;		// set character to send the nRF through MOSI
-	RFSPIF = 0;			// reset the RF SPI interrupt flag
-	while ( !RFSPIF );	// wait for byte to finish
-	byte = RFDAT;		// remember the byte received from nRF through MISO
+	byte = SPDR;			// remember the byte received from nRF through MISO
+#else
+
+# ifdef NRF24LE1
+
+	SPIRDAT = byte;			// set byte to send the nRF through the internal MOSI
+	
+	// wait while there is data in the internal SPI fifo
+	while ((SPIRSTAT & (uint8_t)0x02U) == 0)
+		;
+		
+	byte = SPIRDAT;			// remember the byte received from nRF through MISO
+	
+# elif defined(NRF24LU1)
+
+	RFDAT = byte;			// set byte to send the nRF through the internal MOSI
+	RFSPIF = 0;				// reset the RF SPI interrupt flag
+	while ( !RFSPIF );		// wait for byte to finish
+	byte = RFDAT;			// remember the byte received from nRF through MISO
+	
+# endif
+
 #endif		
 
 	return byte;
