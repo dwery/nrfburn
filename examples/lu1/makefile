@@ -1,8 +1,8 @@
 TARGET   = testRadio.ihx
-CFLAGS   = --model-small -I../common
+CFLAGS   = --model-small -I../common -DNRF24LU1
 LFLAGS   = --code-loc 0x0000 --code-size 0x4000 --xram-loc 0x8000 --xram-size 0x800
 ASFLAGS  = -plosgff
-RELFILES = testRadio.rel crtxinit.rel
+RELFILES = testRadio.rel crtxinit.rel utils.rel nRF24L.rel
 
 VPATH    = ../common
 

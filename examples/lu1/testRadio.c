@@ -2,28 +2,12 @@
 #include <stdint.h>
 #include <string.h>
 
-//#include "nRF24L.h"
 #include "reg24lu1.h"
-/*
-void delay_us(uint16_t us)
-{
-	do {
-		__asm
-		nop
-		nop
-		nop
-		nop
-		nop
-		__endasm;
-	} while (--us);
-}
+#include "utils.h"
 
-void delay_ms(uint16_t ms)
-{
-	do {
-		delay_us(1000);
-	} while (--ms);
-}
+#include "nRF24L.h"
+
+/*
 
 #define BAUD_57K6   1015  // = Round(1024 - (2*16e6)/(64*57600))
 #define BAUD_38K4   1011  // = Round(1024 - (2*16e6)/(64*38400))
@@ -46,9 +30,11 @@ void uart_init(void)
 	//temp = BAUD_19K2;
 	S0RELL = (uint8_t)temp;
 	S0RELH = (uint8_t)(temp >> 8);
+
 	P0ALT |= 0x06;		// Select alternate functions on P01 and P02
 	P0EXP &= 0xf0;		// Select RxD on P01 and TxD on P02
 	P0DIR |= 0x02;		// P01 (RxD) is input
+
 	TI0 = 1;		
 	//ES0 = 1;			// Enable UART0 interrupt
 }
@@ -61,6 +47,7 @@ void putchar(char c)
     S0BUF = c;
 }
 */
+
 /*
 void main()
 {
@@ -109,18 +96,39 @@ void main()
 }
 */
 
+// ISR for 
+void EXT_INT0_ISR(void) __interrupt 0
+{
+	if (P00 == 0)
+		P00 = 1;
+	else
+		P00 = 0;
+}
+
 void main()
 {
-	P0DIR = 0x00;	// all out; LED is on P03
+	//P0DIR = 0x08;	// all out; LED is on P03
+	P0DIR = 0x00;
 	
-	//uart_init();
-
+	// uart_init();
+	
+	P00 = 0;
+	P01 = 1;
+	P02 = 1;
+	
+	// enable P0.3 ext interrupt
+	IEN0 = 0x81;	// enable interrupts, enable P0.3 interrupt
+	
 	while (1)
 	{
+		P00 = 1;
+		P01 = 1;
+		P02 = 1;
 		P03 = 1;
-		//delay_us(300);
-
+		
 		P03 = 0;
-		//delay_us(300);
+		P02 = 0;
+		P01 = 0;
+		P00 = 0;
 	}
 }
