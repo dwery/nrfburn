@@ -18,7 +18,7 @@ $(TARGET): $(RELFILES)
 	sdas8051 $(ASFLAGS) $@ $< 
 
 clean:
-	rm --force *.ihx *.lnk *.lst *.map *.rel *.rst *.sym *.mem *.lk testRadio.asm nRF24L.asm testRadio.lk testRadio.cdb testRadio.omf
+	rm --force *.ihx *.lnk *.lst *.map *.rel *.rst *.sym *.mem *.lk *.asm *.lk *.cdb *.omf
 
 all: clean main
 

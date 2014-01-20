@@ -25,8 +25,9 @@ void delay_ms(uint16_t ms)
 __xdata volatile uint8_t* pChipID = (__xdata void*) 0x000B;
 
 /*
-my CHIPID (large) = 0x2ADF32E602
-my CHIPID (small) = 0x189E9772D3
+my CHIPID (large)    = 0x2ADF32E602
+my CHIPID (small)    = 0x189E9772D3
+my CHIPID (SparkFun) = 0x500737F4C6
 
 0x20 = 0xff number of unprotected pages
 0x21 = 0xb0 enable flash data memory (0xff -> no data memory)

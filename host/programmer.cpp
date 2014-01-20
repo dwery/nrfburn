@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #include <string>
 #include <memory>
@@ -78,6 +79,16 @@ inline uint8_t req2resp(const int req)
 	return req | 0x80;
 }
 
+void Programmer::ProgressBar::Refresh(const double progress)
+{
+	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
+
+	std::string hashes(size_t(progress * 50), '#');
+
+	printf("\r%-10s | %-50s | %3i%%  %.2fs", process_name, hashes.c_str(), int(progress * 100), seconds);
+	fflush(stdout);
+}
+
 Programmer::~Programmer()
 {
 	if (needsProgEnd)
@@ -127,9 +138,6 @@ void Programmer::ReadFlashRegisters()
 
 void Programmer::ProgBegin()
 {
-	//if (progBeginCalled)
-	//	throw std::string("ProgBegin() called twice without ProgEnd()");
-
 	// send ProgBegin request
 	req_simple_t req;
 	req.length = sizeof req;
@@ -247,13 +255,13 @@ void Programmer::ReadChunk(const bool isInfoPage, FlashMemory& flash, const int 
 	memcpy(flash.GetFlash() + offset, resp.data, PROG_CHUNK_SIZE);
 }
 
-void Programmer::ReadMainBlock(const std::string& hexfilename, ProgressCallback printProgress)
+void Programmer::ReadMainBlock(const std::string& hexfilename)
 {
 	// is MainBlock readback disabled?
 	if (!CanReadMainBlock())
 		throw std::string("MainBlock readback is disabled by the chip config.");
 
-	ProgressHandler progress(printProgress);
+	ProgressBar pg("Reading");
 
 	FlashMemory flash(flashSize);
 
@@ -265,8 +273,7 @@ void Programmer::ReadMainBlock(const std::string& hexfilename, ProgressCallback 
 		address += PROG_CHUNK_SIZE;
 
 		// update the progress bar
-		if (printProgress)
-			printProgress(CB_Progress, address / double(flash.GetFlashSize()));
+		pg.Refresh(address / double(flash.GetFlashSize()));
 	}
 
 	// now save everything
@@ -287,12 +294,16 @@ void Programmer::ReadInfoPage(const std::string& hexfilename)
 		ReadChunk(true, flash, address);
 		address += PROG_CHUNK_SIZE;
 	}
+	
+	// print the chip ID
+	const uint8_t* pFlash = flash.GetFlash();
+	printf("Chip ID = %02x-%02x-%02x-%02x-%02x\n", pFlash[0x0B], pFlash[0x0C], pFlash[0x0D], pFlash[0x0E], pFlash[0x0F]);
 
 	// now save everything
 	flash.SaveHex(hexfilename);
 }
 
-void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verify, ProgressCallback printWriteProgress, ProgressCallback printVerifyProgress)
+void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verify)
 {
 	FlashMemory flash(flashSize);
 	
@@ -300,8 +311,8 @@ void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verif
 
 	// do the flash writing
 	{
-		ProgressHandler writeProgress(printWriteProgress);
-
+		ProgressBar pg("Reading");
+		
 		EraseAll();			// erase the chip's MainBlock
 
 		// start writing the flash
@@ -325,14 +336,14 @@ void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verif
 			address += PROG_CHUNK_SIZE;
 
 			// update the progress bar
-			writeProgress(address / double(flash.GetFlashSize()));
+			pg.Refresh(address / double(flash.GetFlashSize()));
 		}
 	}
 		
 	// run a verify if requested
 	if (verify)
 	{
-		ProgressHandler verifyProgress(printVerifyProgress);
+		ProgressBar pg("Verifying");
 		
 		FlashMemory verifyFlash(flashSize);
 
@@ -344,7 +355,7 @@ void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verif
 			address += PROG_CHUNK_SIZE;
 
 			// update the progress bar
-			verifyProgress(address / double(flashSize));
+			pg.Refresh(address / double(flashSize));
 		}
 
 		// now compare

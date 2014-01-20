@@ -132,59 +132,6 @@ std::string int2str(const int i)
 	return buff;
 }
 
-void printProgressWrite(const Programmer::CallbackPhase phase, const double progress)
-{
-	static clock_t time_begin;
-	
-	if (phase == Programmer::CB_Init)
-	{
-		time_begin = clock();
-	} else if (phase == Programmer::CB_End) {
-		printf("\n\n");
-	} else {
-		double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
-
-		std::string hashes(size_t(progress * 50), '#');
-		printf("\rFlashing  | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
-		fflush(stdout);
-	}
-}
-
-void printProgressVerify(const Programmer::CallbackPhase phase, const double progress)
-{
-	static clock_t time_begin;
-	if (phase == Programmer::CB_Init)
-	{
-		time_begin = clock();
-	} else if (phase == Programmer::CB_End) {
-		printf("\n\n");
-	} else {
-
-		double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
-
-		std::string hashes(size_t(progress * 50), '#');
-		printf("\rVerifying | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
-		fflush(stdout);
-	}
-}
-
-void printProgressRead(const Programmer::CallbackPhase phase, const double progress)
-{
-	static clock_t time_begin;
-	if (phase == Programmer::CB_Init)
-	{
-		time_begin = clock();
-	} else if (phase == Programmer::CB_End) {
-		printf("\n\n");
-	} else {
-		double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
-
-		std::string hashes(size_t(progress * 50), '#');
-		printf("\rReading   | %-50s | %3i%%  %.2fs", hashes.c_str(), int(progress * 100), seconds);
-		fflush(stdout);
-	}
-}
-
 void DoProg(const Options& opt)
 {
 	// open the port
@@ -219,16 +166,14 @@ void DoProg(const Options& opt)
 	{
 		prg.EraseAll();
 	} else if (!opt.WriteMBFrom.empty()) {
-		prg.WriteMainBlock(opt.WriteMBFrom, opt.DoVerify, printProgressWrite, printProgressVerify);
-
-		printf("MainBlock flash written from %s\n", opt.WriteMBFrom.c_str());
+		prg.WriteMainBlock(opt.WriteMBFrom, opt.DoVerify);
+		printf("\nMainBlock flash written from %s\n", opt.WriteMBFrom.c_str());
 	} else if (!opt.ReadMBInto.empty()) {
-		prg.ReadMainBlock(opt.ReadMBInto, printProgressRead);
-
-		printf("MainBlock contents saved into %s\n", opt.ReadMBInto.c_str());
+		prg.ReadMainBlock(opt.ReadMBInto);
+		printf("\nMainBlock contents saved into %s\n", opt.ReadMBInto.c_str());
 	} else if (!opt.ReadIPInto.empty()) {
 		prg.ReadInfoPage(opt.ReadIPInto);
-		printf("InfoPage contents saved into %s\n", opt.ReadIPInto.c_str());
+		printf("\nInfoPage contents saved into %s\n", opt.ReadIPInto.c_str());
 	} else if (!opt.ChipID.empty()) {
 		prg.WriteInfoPage(opt.ChipID);
 		printf("ChipID %s written.\n", opt.ChipID.c_str());

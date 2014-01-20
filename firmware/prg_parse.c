@@ -150,6 +150,14 @@ static void readFlash(void)
 {
 	respBuffer.readFlash.length = sizeof respBuffer.readFlash;
 
+	// set INFEN if reading InfoPage
+	uint8_t fsr = ProgSpiRDSR();
+	if (reqBuffer.writeFlash.request == reqReadInfoPage)
+		SetBit(fsr, FSR_INFEN);
+	else
+		ClrBit(fsr, FSR_INFEN);
+
+	ProgSpiWRSR(fsr);
 	ProgSpiREAD(reqBuffer.readFlash.address, respBuffer.readFlash.data);
 }
 
@@ -163,12 +171,15 @@ static void setTimeoutResponse(void)
 static void writeFlash(void)
 {
 	// set WEN and INFEN
-	uint8_t fsr = (ProgSpiRDSR() & _BV(FSR_DBG)) | _BV(FSR_WEN);
-	if (reqBuffer.writeFlash.request == reqWriteMainBlock)
-		ProgSpiWRSR(fsr);
+	uint8_t fsr = ProgSpiRDSR() | _BV(FSR_WEN);
+	if (reqBuffer.writeFlash.request == reqWriteInfoPage)
+		SetBit(fsr, FSR_INFEN);
 	else
-		ProgSpiWRSR(fsr | _BV(FSR_INFEN));
-	
+		ClrBit(fsr, FSR_INFEN);
+
+	// write the FSR to enable writing and/or INFEN
+	ProgSpiWRSR(fsr);
+		
 	// do the programming of PROG_CHUNK_SIZE bytes
 	ProgSpiPROGRAM(reqBuffer.writeFlash.address, reqBuffer.writeFlash.data);
 	

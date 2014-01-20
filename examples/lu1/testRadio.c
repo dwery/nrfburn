@@ -96,39 +96,3 @@ void main()
 }
 */
 
-// ISR for 
-void EXT_INT0_ISR(void) __interrupt 0
-{
-	if (P00 == 0)
-		P00 = 1;
-	else
-		P00 = 0;
-}
-
-void main()
-{
-	//P0DIR = 0x08;	// all out; LED is on P03
-	P0DIR = 0x00;
-	
-	// uart_init();
-	
-	P00 = 0;
-	P01 = 1;
-	P02 = 1;
-	
-	// enable P0.3 ext interrupt
-	IEN0 = 0x81;	// enable interrupts, enable P0.3 interrupt
-	
-	while (1)
-	{
-		P00 = 1;
-		P01 = 1;
-		P02 = 1;
-		P03 = 1;
-		
-		P03 = 0;
-		P02 = 0;
-		P01 = 0;
-		P00 = 0;
-	}
-}

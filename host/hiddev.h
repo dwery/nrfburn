@@ -1,10 +1,3 @@
-// Name: hiddata.h
-// Author: Christian Starkjohann
-// Creation Date: 2008-04-11
-// Tabsize: 4
-// Copyright: (c) 2008 by OBJECTIVE DEVELOPMENT Software GmbH
-// License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
-
 #pragma once
 
 // Opaque data type representing the USB device. This can be a Windows handle

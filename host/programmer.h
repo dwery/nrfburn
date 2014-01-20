@@ -6,11 +6,6 @@
 
 class Programmer
 {
-public:
-	enum CallbackPhase {CB_Init, CB_Progress, CB_End};
-	
-	typedef void (*ProgressCallback)(const CallbackPhase phase, const double progress);
-
 private:
 	HIDBurner	hidBurn;		// the programmer communication
 
@@ -32,34 +27,23 @@ private:
 	template <class Resp>
 	void ReadResponse(Resp& resp);
 
-	enum {
-		InfoPageSize = 512,
-	};
+	enum { InfoPageSize = 512 };
 	
-	// helper class - used to relay calls to the progress callback
-	// and handle the init/end phase of the callback process
-	struct ProgressHandler
+	struct ProgressBar
 	{
-		ProgressCallback callback;
+		clock_t				time_begin;
+		const char* 		process_name;
 		
-		ProgressHandler(ProgressCallback cb)
-			: callback(cb)
+		ProgressBar(const char* pn)
+			: time_begin(clock()), process_name(pn)
+		{}
+		
+		~ProgressBar()
 		{
-			if (callback)
-				callback(CB_Init, 0);
+			printf("\n");
 		}
 
-		void operator () (const double progress)
-		{
-			if (callback)
-				callback(CB_Progress, progress);
-		}
-		
-		~ProgressHandler()
-		{
-			if (callback)
-				callback(CB_End, 0);
-		}
+		void Refresh(const double progress);
 	};
 	
 public:
@@ -82,9 +66,9 @@ public:
 
 	void EraseAll();
 
-	void ReadMainBlock(const std::string& hexfilename, ProgressCallback printProgress = NULL);
-	void WriteMainBlock(const std::string& hexfilename, const bool verify, ProgressCallback printWriteProgress = NULL, ProgressCallback printVerifyProgress = NULL);
-	void VerifyMainBlock(const std::string& hexfilename, ProgressCallback printProgress = NULL);
+	void ReadMainBlock(const std::string& hexfilename);
+	void WriteMainBlock(const std::string& hexfilename, const bool verify);
+	void VerifyMainBlock(const std::string& hexfilename);
 
 	void ReadInfoPage(const std::string& hexfilename);
 	void WriteInfoPage(const std::string& chipID);
