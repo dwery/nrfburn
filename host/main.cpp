@@ -12,7 +12,7 @@
 
 void PrintHelp()
 {
-	printf("nrfburn v0.01   build %s %s\n", __DATE__, __TIME__);
+	printf("nrfburn v0.1   build %s %s\n", __DATE__, __TIME__);
 	printf("Usage: nrfburn [options]\n");
 	printf("Options:\n");
 	printf("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.\n");
@@ -194,7 +194,7 @@ int main(const int argc, const char* argv[])
 
 		DoProg(opt);
 	} catch (std::string& e) {
-		fprintf(stderr, "%s\n", e.c_str());
+		fprintf(stderr, "\nError: %s\n", e.c_str());
 		return 1;
 	}
 
