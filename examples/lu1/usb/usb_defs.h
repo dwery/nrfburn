@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 // standard request codes
 #define USB_REQ_GET_STATUS         0x00
 #define USB_REQ_CLEAR_FEATURE      0x01
@@ -30,10 +28,10 @@
 #define USB_DESC_HID_PHYS			0x23
 
 // endpoint types
-#define USB_EP_TYPE_CONTROL			0x00
-#define USB_EP_TYPE_ISO				0x01
-#define USB_EP_TYPE_BULK			0x02
-#define USB_EP_TYPE_INT				0x03
+#define USB_EP_TYPE_CTRL		0x00
+#define USB_EP_TYPE_ISO			0x01
+#define USB_EP_TYPE_BULK		0x02
+#define USB_EP_TYPE_INT			0x03
 
 // clear hsnak bit
 #define USB_EP0_HSNAK()		ep0cs = 0x02
@@ -51,6 +49,14 @@
 #define INT_EP1IN    0x20
 #define INT_EP1OUT   0x24
 #define INT_EP2IN    0x28
+#define INT_EP2OUT   0x2C
+#define INT_EP3IN    0x30
+#define INT_EP3OUT   0x34
+#define INT_EP4IN    0x38
+#define INT_EP4OUT   0x3C
+#define INT_EP5IN    0x40
+#define INT_EP5OUT   0x44
+
 
 #define USB_BM_STATE_CONFIGURED           0x01
 #define USB_BM_STATE_ALLOW_REMOTE_WAKEUP  0x02
@@ -67,3 +73,4 @@ typedef enum
     CONFIGURED,
     SUSPENDED
 } usb_state_t;
+

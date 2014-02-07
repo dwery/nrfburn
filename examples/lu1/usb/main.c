@@ -3,6 +3,7 @@
 
 #include "reg24lu1.h"
 #include "utils.h"
+
 #include "usb_defs.h"
 #include "usb_desc.h"
 
@@ -351,28 +352,25 @@ static void usb_std_interface_request()
 
 static void isr_sudav()
 {
-	// setupbuf[0] == bmRequestType
-	if ( ( setupbuf[0] & 0x60 ) == 0x00 )
+	// setupbuf[0] is bmRequestType
+	uint8_t requestType = setupbuf[0] & 0x60;
+
+	// if standard request
+	if (requestType == 0x00)	
 	{
-		switch ( setupbuf[0] & 0x03 )
-		{
-			case 0: // Device
-				usb_std_device_request();
-				break;
-			case 1: // Interface
-				usb_std_interface_request();
-				break;
-			case 2: // Endpoint
-				usb_std_endpoint_request();
-				break;
-			default: // Stall on unsupported recipient
-				USB_EP0_STALL();
-				break;
-		}
-	}
-	else
-	{
-		// Stall on unsupported requests
+		uint8_t recipient = setupbuf[0] & 0x1f;
+		if (recipient == 0)			// device
+			usb_std_device_request();
+		else if (recipient == 1)	// interface
+			usb_std_interface_request();
+		else if (recipient == 2)	// endpoint
+			usb_std_endpoint_request();
+		else
+			USB_EP0_STALL();
+
+	} else {
+		
+		// stall on unsupported requests
 		USB_EP0_STALL();
 	}
 }
@@ -381,66 +379,49 @@ bool usb_irq(void)
 {
 	bool ret = false;
 
-	switch(ivec)
+	switch (ivec)
 	{
-		case INT_USBRESET: // Bus reset
-			// Clear interrupt flag
-			usbirq = 0x10;
-			// Reset internal states
-			usb_state = DEFAULT;
-			usb_current_config = 0;
-			break;
-		case INT_SUDAV: // SETUP data packet
-			// Clear interrupt flag
-			usbirq = 0x01;
-			// Process setup data
-			isr_sudav();
-			break;
-		case INT_SOF: // Start of Frame packet
-			// Clear interrupt flag
-			usbirq = 0x02;
-			break;
-		case INT_SUTOK: // Setup token
-			// Clear interrupt flag
-			usbirq = 0x04;
-			// Clear EP0 IN data pointers
-			packetizer_data_ptr = 0;
-			packetizer_data_size = 0;
-			break;
-		case INT_SUSPEND: // SUSPEND signal
-			// Clear interrupt flag
-			usbirq = 0x08;
-			break;
-		case INT_EP0IN:
-			// Clear interrupt flag
-			in_irq = 0x01;
-			// Update USB RAM EP0 IN with new data
-			packetizer_isr_ep0_in();
-			break;
-		case INT_EP0OUT:
-			// Clear interrupt flag
-			out_irq = 0x01;
-			break;
-		case INT_EP1IN:
-			// Clear interrupt flag
-			in_irq = 0x02;
-			// User code will have already filled IN1 buffer and set byte count
-			// USB controller clears busy flag when data is sent
-			break;
-		case INT_EP1OUT:
-			// Clear interrupt flag
-			out_irq = 0x02;
-			// Set packet rx flag
-			ret = true;
-			break;
-		case INT_EP2IN:
-			// Clear interrupt flag
-			in_irq = 0x04;
-			// User code will have already filled IN2 buffer and set byte count
-			// USB controller clears busy flag when data is sent
-			break;
-		default:
-			break;
+	case INT_USBRESET:	// Bus reset
+		usbirq = 0x10;	// clear interrupt flag
+		// Reset internal states
+		usb_state = DEFAULT;
+		usb_current_config = 0;
+		break;
+	case INT_SUDAV:		// SETUP data packet
+		usbirq = 0x01;	// clear interrupt flag
+		// Process setup data
+		isr_sudav();
+		break;
+	case INT_SOF:		// Start of Frame packet
+		usbirq = 0x02;	// clear interrupt flag
+		break;
+	case INT_SUTOK:		// Setup token
+		usbirq = 0x04;	// clear interrupt flag
+		// Clear EP0 IN data pointers
+		packetizer_data_ptr = 0;
+		packetizer_data_size = 0;
+		break;
+	case INT_SUSPEND:	// SUSPEND signal
+		usbirq = 0x08;	// clear interrupt flag
+		break;
+	case INT_EP0IN:
+		in_irq = 0x01;	// clear interrupt flag
+		// update USB RAM EP0 IN with new data
+		packetizer_isr_ep0_in();
+		break;
+	case INT_EP0OUT:
+		out_irq = 0x01;	// clear interrupt flag
+		break;
+	case INT_EP1IN:
+		in_irq = 0x02;	// clear interrupt flag
+		// user code will have already filled IN1 buffer and set byte count
+		// USB controller clears busy flag when data is sent
+		break;
+	case INT_EP1OUT:
+		out_irq = 0x02;	// clear interrupt flag
+		// Set packet rx flag
+		ret = true;
+		break;
 	}
 
 	return ret;

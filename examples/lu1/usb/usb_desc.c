@@ -1,7 +1,10 @@
+#include <stdint.h>
+
 #include "usb_desc.h"
 
-const usb_dev_desc_t g_usb_dev_desc = {
-	sizeof(usb_dev_desc_t), 
+const usb_dev_desc_t g_usb_dev_desc =
+{
+	sizeof(usb_dev_desc_t),
 	USB_DESC_DEVICE, 
 	0x0200,					// bcdUSB
 	0x00,					// bDeviceClass		- deferred to interface
@@ -17,6 +20,8 @@ const usb_dev_desc_t g_usb_dev_desc = {
 	0x01					// bNumConfigurations
 };
 
+//const uint8_t* 
+
 const usb_conf_desc_keyboard_t g_usb_conf_desc = 
 {
 	// configuration descriptor
@@ -28,7 +33,7 @@ const usb_conf_desc_keyboard_t g_usb_conf_desc =
 		1,		// bConfigurationValue
 		2,		// iConfiguration
 		0x80,	// bmAttributes - bus powered, no remote wakeup
-		25,		// bMaxPower
+		25,		// bMaxPower == 50mA
 	},
 	// interface descriptor
 	{
@@ -42,9 +47,19 @@ const usb_conf_desc_keyboard_t g_usb_conf_desc =
 		0x01,	// bInterfaceProtocol	- Keyboard
 		0x00,	// iInterface
 	},
+	// HID descriptor
+	{
+		sizeof(usb_hid_desc_t),
+		USB_DESC_HID,
+		0x0101,					// bcdHID
+		0x00,					// bCountryCode
+		1,						// bNumDescriptors
+		USB_DESC_HID_REPORT,	// bDescriptorType_HID
+				// wDescriptorLength
+	},
 	// endpoint descriptor EP1IN
 	{
-		sizeof(usb_ep_desc_t),
+		sizeof usb_ep_desc_t,
 		USB_DESC_ENDPOINT,
 		0x81,				// bEndpointAddress
 		USB_EP_TYPE_INT,	// bmAttributes
@@ -54,6 +69,7 @@ const usb_conf_desc_keyboard_t g_usb_conf_desc =
 };
 
 #define USB_STRING_IDX_1_DESC "Carson Morrow"
+
 const uint8_t g_usb_string_desc_1[] = 
 {
 	sizeof(USB_STRING_IDX_1_DESC) * 2, 0x03,
