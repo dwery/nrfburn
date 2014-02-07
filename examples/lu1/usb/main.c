@@ -90,18 +90,18 @@ volatile __xdata __at (0xC7F8) uint8_t in8addr;
 static uint8_t usb_current_config;
 static usb_state_t usb_state;
 
-static uint8_t const * packetizer_data_ptr;
+static __code const uint8_t* packetizer_data_ptr;
 static uint8_t packetizer_data_size;
 
-void usb_init(void)
+void usbInit(void)
 {
-	// Disconnect from USB-bus since we are in this routine from a power on and not a soft reset
+	// disconnect from USB-bus since we are in this routine from a power on and not a soft reset
 	usbcs |= 0x08;
 	delay_ms(50);
 	usbcs &= ~0x08;
 
 	// set up interrupts and clear interrupt flags
-	usbien = 0b00011101;	// bit	description
+	usbien = 0b00011001;	// bit	description
 							// 4	uresie	USB reset interrupt enable
 							// 3	suspie	USB suspend interrupt enable
 							// 2	sutokie	SETUP token interrupt enable
@@ -140,10 +140,9 @@ void usb_init(void)
 
 static void packetizer_isr_ep0_in()
 {
-	uint8_t const* data_ptr; 
 	uint8_t size, i;
 
-	if ( packetizer_data_size == 0 )
+	if (packetizer_data_size == 0)
 	{
 		// We are getting a ep0in interrupt when the host sends ACK and do not
 		//   have any more data to send
@@ -155,156 +154,124 @@ static void packetizer_isr_ep0_in()
 	}
 
 	// Send the smallest of the data size and USB RAM EP0 IN size
-	size = MIN( packetizer_data_size, MAX_PACKET_SIZE_EP0 );
+	size = MIN(packetizer_data_size, MAX_PACKET_SIZE_EP0);
 
 	// Copy data to the USB-controller buffer
-	data_ptr = packetizer_data_ptr;
-	for ( i = 0; i < size; ++i)
-		in0buf[i] = *data_ptr++;
+	for (i = 0; i < size; ++i)
+		in0buf[i] = *packetizer_data_ptr++;
 
 	// Tell the USB-controller how many bytes to send
 	// If a IN is received from host after this the USB-controller will send the data
 	in0bc = size;
 
-	// Update the packetizer data position
-	packetizer_data_ptr += size;
+	// update the packetizer data count
 	packetizer_data_size -= size;
 }
 
 static void usb_process_get_descriptor()
 {
-    // Switch on descriptor type
-    switch ( setupbuf[3] )
-    {
-        case USB_DESC_DEVICE:
-			// Transfer device descriptor
-            packetizer_data_ptr = (uint8_t*)&g_usb_dev_desc;
-			// We can't send more than setupbuf[6] == wLength and don't need
-			//   to send more data than we have
-            packetizer_data_size = MIN(setupbuf[6], sizeof(usb_dev_desc_t));
-            packetizer_isr_ep0_in();
-            break;
+	uint8_t descriptor = setupbuf[3];
+	packetizer_data_ptr = 0;
+	
+	if (descriptor == USB_DESC_DEVICE)
+	{
+		packetizer_data_ptr = (__code uint8_t*) &usb_dev_desc;
+	} else if (descriptor == USB_DESC_CONFIGURATION) {
+		packetizer_data_ptr = (__code uint8_t*) &usb_conf_desc;
+	} else if (descriptor == USB_DESC_STRING) {
 
-        case USB_DESC_CONFIGURATION:
-            // We only support one configuration, so always return it
-            packetizer_data_ptr = (uint8_t*)&g_usb_conf_desc;
-			// We can't send more than setupbuf[6] == wLength and don't need
-			//   to send more data than we have
-            packetizer_data_size = MIN(setupbuf[6], sizeof(usb_conf_desc_keyboard_t));
-            packetizer_isr_ep0_in();
-            break;
+		uint8_t string_id = setupbuf[2];
+		
+		// string index 0 is list of supported lang ids
+		if (string_id < USB_STRING_DESC_COUNT)
+		{
+			if (string_id == 0)
+				packetizer_data_ptr = usb_string_desc_0;
+			else if (string_id == 1)
+				packetizer_data_ptr = (__code uint8_t*) usb_string_desc_1;
+			else
+				packetizer_data_ptr = (__code uint8_t*) usb_string_desc_2;
+		}
+	}
 
-        case USB_DESC_STRING:
-            // String index 0 is list of supported lang ids
-            if ( setupbuf[2] == 0x00 )
-            {
-                packetizer_data_ptr = string_zero;
-				// We can't send more than setupbuf[6] == wLength and don't need
-				//   to send more data than we have
-                packetizer_data_size = MIN(setupbuf[6], sizeof(string_zero));
-                packetizer_isr_ep0_in();
-            }
-			// Otherwise it's the actual descriptors
-            else
-            {
-                if ( ( setupbuf[2] - 1 ) < USB_STRING_DESC_COUNT )
-                {
-                    if ( setupbuf[2] == 1 )
-                        packetizer_data_ptr = g_usb_string_desc_1;
-                    else
-                        packetizer_data_ptr = g_usb_string_desc_2;
-					// We can't send more than setupbuf[6] == wLength and don't need
-					//   to send more data than we have
-                    packetizer_data_size = MIN(setupbuf[6], packetizer_data_ptr[0]);
-                    packetizer_isr_ep0_in();
-                }
-                else
-                {
-					// Stall for invalid string index
-                    USB_EP0_STALL();
-                }
-            }
-            break;
-        default:
-			// Just ignore all other requests and ACK status stage
-			USB_EP0_STALL();
-            break;
-    }
+	if (packetizer_data_ptr)
+	{
+		packetizer_data_size = MIN(setupbuf[6], packetizer_data_ptr[0]);
+		packetizer_isr_ep0_in();
+	} else {
+		USB_EP0_STALL();
+	}
 }
 
 static void usb_std_device_request()
 {
-	switch( setupbuf[1] ) // bRequest
+	switch (setupbuf[1])		// bRequest
 	{
-		case USB_REQ_GET_STATUS:
-			// We must be in ADDRESSED or CONFIGURED state, and wIndex must be 0
-			if ( ( usb_state == ADDRESSED || usb_state == CONFIGURED ) && ( setupbuf[4] == 0x00 ) )
-			{
-				// We aren't self-powered and we don't support remote wakeup
-				in0buf[0] = 0x00;
-				in0buf[1] = 0x00;
-				in0bc = 0x02;
-			}
-			else
-			{
-				// Stall for invalid requests
-				USB_EP0_STALL();
-			}
-			break;
+	case USB_REQ_GET_STATUS:
+		// We must be in ADDRESSED or CONFIGURED state, and wIndex must be 0
+		if ((usb_state == ADDRESSED || usb_state == CONFIGURED)  &&  setupbuf[4] == 0x00)
+		{
+			// We aren't self-powered and we don't support remote wakeup
+			in0buf[0] = 0x00;
+			in0buf[1] = 0x00;
+			in0bc = 0x02;
+		} else {
+			// Stall for invalid requests
+			USB_EP0_STALL();
+		}
+		break;
 
-		case USB_REQ_SET_ADDRESS:
-			// USB controller takes care of setting our address
+	case USB_REQ_SET_ADDRESS:
+		// USB controller takes care of setting our address
+		usb_state = ADDRESSED;
+		break;
+
+	case USB_REQ_GET_DESCRIPTOR:
+		usb_process_get_descriptor();
+		break;
+
+	case USB_REQ_GET_CONFIGURATION:
+		if ( usb_state == ADDRESSED )
+		{
+			in0buf[0] = 0x00;
+			in0bc = 0x01;
+		}
+		else if ( usb_state == CONFIGURED )
+		{
+			in0buf[0] = usb_current_config;
+			in0bc = 0x01;
+		}
+		else
+		{
+			// Behavior not specified in other states, so STALL
+			USB_EP0_STALL();
+		}
+		break;
+
+	case USB_REQ_SET_CONFIGURATION:
+		// setupbuf[2] == wValue
+		if ( setupbuf[2] == 0x00 )
+		{
 			usb_state = ADDRESSED;
-			break;
-
-		case USB_REQ_GET_DESCRIPTOR:
-			usb_process_get_descriptor();
-			break;
-
-		case USB_REQ_GET_CONFIGURATION:
-			if ( usb_state == ADDRESSED )
-			{
-				in0buf[0] = 0x00;
-				in0bc = 0x01;
-			}
-			else if ( usb_state == CONFIGURED )
-			{
-				in0buf[0] = usb_current_config;
-				in0bc = 0x01;
-			}
-			else
-			{
-				// Behavior not specified in other states, so STALL
-				USB_EP0_STALL();
-			}
-			break;
-
-		case USB_REQ_SET_CONFIGURATION:
-			// setupbuf[2] == wValue
-			if ( setupbuf[2] == 0x00 )
-			{
-				usb_state = ADDRESSED;
-				usb_current_config = 0x00;
-				// Since there isn't a data stage for this request,
-				//   we have to explicitly clear the NAK bit
-				USB_EP0_HSNAK();
-			}
-			else if ( setupbuf[2] == 0x01 )
-			{
-				usb_state = CONFIGURED;
-				usb_current_config = 0x01;
-				// Since there isn't a data stage for this request,
-				//   we have to explicitly clear the NAK bit
-				USB_EP0_HSNAK();
-			}
-			else
-			{
-				// Stall for invalid config values
-				USB_EP0_STALL();
-			}
-			break;
-
-		default:
+			usb_current_config = 0x00;
+			// Since there isn't a data stage for this request,
+			//   we have to explicitly clear the NAK bit
+			USB_EP0_HSNAK();
+		}
+		else if ( setupbuf[2] == 0x01 )
+		{
+			usb_state = CONFIGURED;
+			usb_current_config = 0x01;
+			// Since there isn't a data stage for this request,
+			//   we have to explicitly clear the NAK bit
+			USB_EP0_HSNAK();
+		}
+		else
+		{
+			// Stall for invalid config values
+			USB_EP0_STALL();
+		}
+		break;
 	}
 }
 
@@ -312,22 +279,22 @@ static void usb_std_endpoint_request()
 {
 	switch( setupbuf[1] ) // bRequest
 	{
-		case USB_REQ_GET_STATUS:
-			if ( usb_state == CONFIGURED )
-			{
-				// Return Halt feature status
-				if ( setupbuf[4] == 0x81 )
-					in0buf[0] = in1cs & 0x01;
-				else if ( setupbuf[4] == 0x82 )
-					in0buf[0] = in2cs & 0x01;
-				else if ( setupbuf[4] == 0x01 )
-					in0buf[0] = out1cs & 0x01;
-				in0bc = 0x02;
-			}
-			break;
+	case USB_REQ_GET_STATUS:
+		if ( usb_state == CONFIGURED )
+		{
+			// Return Halt feature status
+			if ( setupbuf[4] == 0x81 )
+				in0buf[0] = in1cs & 0x01;
+			else if ( setupbuf[4] == 0x82 )
+				in0buf[0] = in2cs & 0x01;
+			else if ( setupbuf[4] == 0x01 )
+				in0buf[0] = out1cs & 0x01;
+			in0bc = 0x02;
+		}
+		break;
 
-		default:
-			USB_EP0_STALL();
+	default:
+		USB_EP0_STALL();
 	}
 }
 
@@ -335,18 +302,18 @@ static void usb_std_interface_request()
 {
 	switch( setupbuf[1] ) // bRequest
 	{
-		case USB_REQ_GET_STATUS:
-			if ( usb_state == CONFIGURED )
-			{
-				// All values are reserved for interfaces
-				in0buf[0] = 0x00;
-				in0buf[1] = 0x00;
-				in0bc = 0x02;
-			}
-			break;
+	case USB_REQ_GET_STATUS:
+		if ( usb_state == CONFIGURED )
+		{
+			// All values are reserved for interfaces
+			in0buf[0] = 0x00;
+			in0buf[1] = 0x00;
+			in0bc = 0x02;
+		}
+		break;
 
-		default:
-			USB_EP0_STALL();
+	default:
+		USB_EP0_STALL();
 	}
 }
 
@@ -367,9 +334,7 @@ static void isr_sudav()
 			usb_std_endpoint_request();
 		else
 			USB_EP0_STALL();
-
 	} else {
-		
 		// stall on unsupported requests
 		USB_EP0_STALL();
 	}
@@ -392,14 +357,14 @@ bool usb_irq(void)
 		// Process setup data
 		isr_sudav();
 		break;
-	case INT_SOF:		// Start of Frame packet
+	/*case INT_SOF:		// Start of Frame packet
 		usbirq = 0x02;	// clear interrupt flag
 		break;
 	case INT_SUTOK:		// Setup token
 		usbirq = 0x04;	// clear interrupt flag
 		// Clear EP0 IN data pointers
 		packetizer_data_ptr = 0;
-		packetizer_data_size = 0;
+		packetizer_data_size = 0;*/
 		break;
 	case INT_SUSPEND:	// SUSPEND signal
 		usbirq = 0x08;	// clear interrupt flag
@@ -435,9 +400,9 @@ void main()
 	P0ALT = 0x00;
 
 	// Initialize USB
-	usb_init();
+	usbInit();
 
-	for(;;)
+	for (;;)
 	{
 		// Check for USB interrupt
 		if (USBF)

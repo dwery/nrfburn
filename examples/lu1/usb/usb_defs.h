@@ -73,4 +73,3 @@ typedef enum
     CONFIGURED,
     SUSPENDED
 } usb_state_t;
-

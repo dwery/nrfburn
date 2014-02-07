@@ -2,8 +2,6 @@
 
 #include "usb_defs.h"
 
-#define USB_STRING_DESC_COUNT 2
-
 typedef struct
 {
 	uint8_t		bLength;
@@ -76,8 +74,11 @@ typedef struct
     usb_ep_desc_t	ep1in;
 } usb_conf_desc_keyboard_t;
 
-extern const usb_conf_desc_keyboard_t g_usb_conf_desc;
-extern const usb_dev_desc_t g_usb_dev_desc;
-extern const uint8_t g_usb_string_desc_1[];
-extern const uint8_t g_usb_string_desc_2[];
-extern const uint8_t string_zero[4];
+#define USB_STRING_DESC_COUNT 3
+
+extern __code const usb_conf_desc_keyboard_t usb_conf_desc;
+extern __code const usb_dev_desc_t usb_dev_desc;
+extern __code const uint8_t  usb_string_desc_0[4];
+extern __code const uint16_t usb_string_desc_1[];
+extern __code const uint16_t usb_string_desc_2[];
+extern __code const uint8_t usb_hid_report_descriptor[];
