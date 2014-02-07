@@ -11,6 +11,11 @@
 #include "avr_serial.h"
 #include "prg_parse.h"
 
+// We are defining feature HID reports which, unlike input/outputs reports can travel in both directions:
+// host to device and device to host. Feature reports are sent using control transfers and that means
+// that the bandwidth is not limited by the 800 bytes/second limitation of the low speed interrupt
+// endpoints. It also means that we are not actually using the interrupt in endpoint 1.
+
 // USB report descriptor
 PROGMEM const char usbHidReportDescriptor[USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH] =
 {

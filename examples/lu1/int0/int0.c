@@ -1,9 +1,11 @@
 #include "reg24lu1.h"
 #include "utils.h"
 
-// for this to work you have to short P0.2 and P0.3
-// a falling edge on P0.2 will cause the ISR to be called
-// this will cause a transition on P0.0
+// this is an example of INT0
+
+// For this to work you have to short P0.2 and P0.3
+// A falling edge on P0.2 will cause the ISR to be called.
+// This, in turn, will call the ISR which causes a transition on P0.0
 
 // ISR for interrupt on P0.3
 void EXT_INT0_ISR(void) __interrupt 0
