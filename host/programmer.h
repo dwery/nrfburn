@@ -24,9 +24,14 @@ private:
 	void WriteChunk(const bool isInfoPage, const FlashMemory& flash, const int offset);
 	void ReadChunk(const bool isInfoPage, FlashMemory& flash, const int offset);
 
+	void ReadResponseRaw(uint8_t* buff, size_t buff_size);
+	
 	template <class Resp>
-	void ReadResponse(Resp& resp);
+	void ReadResponse1(Resp& resp);
 
+	template <class Resp1, class Resp2>
+	size_t ReadResponse2(Resp1& resp1, Resp2& resp2);
+	
 	enum { InfoPageSize = 512 };
 	
 	struct ProgressBar

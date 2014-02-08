@@ -10,13 +10,14 @@
 #include "programmer.h"
 #include "utils.h"
 
-// helper functions
-template <class Resp>
-void Programmer::ReadResponse(Resp& resp)
+// This one reads the response from the programmer.
+// The first byte is always the length of the data block to read.
+void Programmer::ReadResponseRaw(uint8_t* buff, size_t buff_size)
 {
-	uint8_t buff[MAX_PROT_BUFF_SIZE];
+	memset(buff, 0, buff_size);		// wipe the buffer
+	
 	resp_simple_t* pResp = (resp_simple_t*) buff;
-
+	
 	int cnt = 0;
 	while (cnt < 15)
 	{
@@ -56,12 +57,41 @@ void Programmer::ReadResponse(Resp& resp)
 		else if (pRespErr->error_code == respErrTimeoutExpired)
 			throw std::string("Programmer timeout expired -- check connection.");
 	}
+}
 
-	if (pResp->length != sizeof resp)
+template <class Resp>
+void Programmer::ReadResponse1(Resp& resp)
+{
+	uint8_t buff[MAX_PROT_BUFF_SIZE];
+	
+	ReadResponseRaw(buff, sizeof buff);
+	
+	if (buff[0] != sizeof resp)
 		throw std::string("Unexpected response from programmer.");
-
-	// finally copy the buffer into resp
+		
 	memcpy(&resp, buff, sizeof resp);
+}
+
+template <class Resp1, class Resp2>
+size_t Programmer::ReadResponse2(Resp1& resp1, Resp2& resp2)
+{
+	uint8_t buff[MAX_PROT_BUFF_SIZE];
+	
+	ReadResponseRaw(buff, sizeof buff);
+	
+	size_t retVal = 0;
+	if (buff[0] == sizeof resp1)
+	{
+		memcpy(&resp1, buff, sizeof resp1);
+		retVal = 1;
+	} else if (buff[0] == sizeof resp2) {
+		memcpy(&resp2, buff, sizeof resp2);
+		retVal = 2;
+	} else {
+		throw std::string("Unexpected response from programmer.");
+	}
+	
+	return retVal;
 }
 
 template <class Req>
@@ -106,7 +136,7 @@ void Programmer::CheckProgrammerVer()
 	
 	// read the response
 	resp_version_t resp_ver;
-	ReadResponse(resp_ver);
+	ReadResponse1(resp_ver);
 
 	if (resp_ver.response != req2resp(reqVersion))
 		throw std::string("Unexpected response from programmer while reading version code.");
@@ -127,7 +157,7 @@ void Programmer::ReadFlashRegisters()
 	hidBurn.Write(read_regs);
 
 	resp_read_fsr_fpcr_t resp_regs;
-	ReadResponse(resp_regs);
+	ReadResponse1(resp_regs);
 
 	if (resp_regs.response != req2resp(reqReadFsrFpcr))
 		throw std::string("Unexpected response from programmer while reading flash registers.");
@@ -147,7 +177,7 @@ void Programmer::ProgBegin()
 
 	// validate response
 	resp_simple_t resp;
-	ReadResponse(resp);
+	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqProgBegin))
 		throw std::string("Unexpected response from programmer in ProgBegin()");
@@ -166,7 +196,7 @@ void Programmer::ProgEnd()
 
 	// validate response
 	resp_simple_t resp;
-	ReadResponse(resp);
+	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqProgEnd))
 		throw std::string("Unexpected response from programmer in ProgEnd()");
@@ -203,7 +233,7 @@ void Programmer::EraseAll()
 
 	// validate response
 	resp_simple_t resp;
-	ReadResponse(resp);
+	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqEraseAll))
 		throw std::string("Unexpected response from programmer in EraseAll()");
@@ -225,7 +255,7 @@ void Programmer::WriteChunk(const bool isInfoPage, const FlashMemory& flash, con
 
 	// validate the response
 	resp_simple_t resp;
-	ReadResponse(resp);
+	ReadResponse1(resp);
 
 	if (resp.response != req2resp(req.request))
 		throw std::string("Unexpected response from programmer in WriteChunk()");
@@ -236,7 +266,7 @@ void Programmer::ReadChunk(const bool isInfoPage, FlashMemory& flash, const int 
 	if (offset + PROG_CHUNK_SIZE > flash.GetFlashSize())
 		throw std::string("Offset outside available flash in ReadChunk()");
 
-	// send WriteFlash request
+	// send ReadFlash request
 	req_read_flash_t req;
 	req.length = sizeof req;
 	req.address = offset;
@@ -244,22 +274,35 @@ void Programmer::ReadChunk(const bool isInfoPage, FlashMemory& flash, const int 
 	reqSetChecksum(req);
 	hidBurn.Write(req);
 
-	// validate the response
-	resp_read_flash_t resp;
-	ReadResponse(resp);
+	// We can receive one of two responses:
+	// a full resp_read_flash_t response that contains the entire flash block,
+	// or a resp_simple_t in case the block we've read contains only 0xff.
+	// This way we are reducing times for reading and verification
+	// for devices which are mostly unprogrammed.
+	resp_read_flash_t resp1;
+	resp_simple_t resp2;
+	
+	memset(&resp1, 0, sizeof resp1);
+	memset(&resp2, 0, sizeof resp2);
+	
+	size_t activeResp = ReadResponse2(resp1, resp2);
 
-	if (resp.response != req2resp(req.request))
+	if (resp1.response != req2resp(req.request)  &&  resp2.response != req2resp(req.request))
 		throw std::string("Unexpected response from programmer in ReadChunk()");
 
-	// copy the chunk to the flash object
-	memcpy(flash.GetFlash() + offset, resp.data, PROG_CHUNK_SIZE);
+	if (activeResp == 1)
+		// copy the chunk to the flash object
+		memcpy(flash.GetFlash() + offset, resp1.data, PROG_CHUNK_SIZE);
+	else
+		// or just set everything to 0xff
+		memset(flash.GetFlash() + offset, 0xff, PROG_CHUNK_SIZE);
 }
 
 void Programmer::ReadMainBlock(const std::string& hexfilename)
 {
 	// is MainBlock readback disabled?
 	if (!CanReadMainBlock())
-		throw std::string("MainBlock readback is disabled by the chip config.");
+		throw std::string("MainBlock readback is disabled by the target configuration.");
 
 	ProgressBar pg("Reading");
 
@@ -396,7 +439,7 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 
 	// validate the response
 	resp_simple_t resp;
-	ReadResponse(resp);
+	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqErasePageIP))
 		throw std::string("Unexpected response from programmer while erase page in WriteInfoPage()");
@@ -412,7 +455,7 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 	hidBurn.Write(writeFlash);
 
 	// validate
-	ReadResponse(resp);
+	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqWriteInfoPage))
 		throw std::string("Unexpected response from programmer while writing page in WriteInfoPage()");

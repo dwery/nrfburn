@@ -63,9 +63,9 @@ void progParseResetRx(void)
 	reqPos = 0;
 }
 
-// calcs the checksum of the message in the response buffer.
-// assumes the entire response is valid except for the checksum.
-// sets txPos and txLen which send the response on it's way
+// Calcs the checksum of the message in the response buffer.
+// Assumes the entire response is valid except for the checksum.
+// Sets txPos and txLen which send the response on it's way
 static void prgPrepareResponse(void)
 {
 	uint8_t sum = 0;
@@ -159,6 +159,16 @@ static void readFlash(void)
 
 	ProgSpiWRSR(fsr);
 	ProgSpiREAD(reqBuffer.readFlash.address, respBuffer.readFlash.data);
+	
+	// is the chunk we just read all made up of 0xff ?
+	uint8_t c;
+	for (c = 0; c < PROG_CHUNK_SIZE  &&  respBuffer.readFlash.data[c] == 0xff; ++c)
+		;
+
+	// If the chunk was all 0xff, return only a no-data
+	// variant of the resp_read_flash_t response to save USB bandwidth
+	if (c == PROG_CHUNK_SIZE)
+		respBuffer.simple.length = sizeof respBuffer.simple;
 }
 
 static void setTimeoutResponse(void)
