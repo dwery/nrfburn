@@ -103,12 +103,15 @@ void FlashMemory::LoadHex(const std::string& filename)
 	bool eof_reached = false;
 	const char* pHex = fbuff.get();
 	uint8_t* pFlash = flashBuffer.get();
+	int line_num = 0;
 	do {
 		// check the colon
 		uint8_t checksum = 0;
 
+		++line_num;
+		
 		if (*pHex++ != ':')
-			throw std::string("Invalid HEX file. Line not starting with :");
+			throw std::string("Invalid HEX file. Line " + int2str(line_num) + " not starting with :");
 
 		uint8_t num_data_bytes = GetHexByte(pHex, checksum);
 		uint16_t address = (uint16_t(GetHexByte(pHex, checksum)) << 8) | GetHexByte(pHex, checksum);
@@ -122,6 +125,8 @@ void FlashMemory::LoadHex(const std::string& filename)
 
 			while (num_data_bytes--)
 				pFlash[address++] = GetHexByte(pHex, checksum);
+		} else if (record_type != 1) {	// not eof record
+			throw std::string("Invalid HEX file. Unknown record type " + int2str(record_type) + " in line " + int2str(line_num));
 		}
 
 		checksum = ~checksum + 1;

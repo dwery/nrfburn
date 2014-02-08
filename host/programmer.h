@@ -36,8 +36,8 @@ private:
 	
 	struct ProgressBar
 	{
-		clock_t				time_begin;
-		const char* 		process_name;
+		clock_t			time_begin;
+		const char* 	process_name;
 		
 		ProgressBar(const char* pn)
 			: time_begin(clock()), process_name(pn)
@@ -72,7 +72,7 @@ public:
 	void EraseAll();
 
 	void ReadMainBlock(const std::string& hexfilename);
-	void WriteMainBlock(const std::string& hexfilename, const bool verify);
+	void WriteMainBlock(const std::string& hexfilename);
 	void VerifyMainBlock(const std::string& hexfilename);
 
 	void ReadInfoPage(const std::string& hexfilename);

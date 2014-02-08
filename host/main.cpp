@@ -20,7 +20,7 @@ void PrintHelp()
 	printf("  -w <filename>    Write contents of HEX file to nRF target MainBlock flash.\n");
 	printf("                   Automatically performs a chip erase before programming.\n");
 	printf("                   Does a verification pass after writing is complete.\n");
-	printf("  -v               Skip the flash write verification.\n");
+	printf("  -v <filename>    Verify nRF target MainBlock with contents of HEX file.\n");
 	printf("  -r <filename>    Read nRF target MainBlock into HEX file.\n");
 	printf("  -p <filename>    Read nRF target InfoPage into HEX file.\n");
 	printf("  -e               Perform a chip erase. This erases only the MainBlock, \n");
@@ -36,14 +36,14 @@ struct Options
 {
 	std::string		WriteMBFrom;	// HEX -> MainBlock
 	std::string		ReadMBInto;		// MainBlock -> HEX
+	std::string		VerifyWith;		// HEX with MainBlock
 	std::string		ReadIPInto;		// InfoPage -> HEX
 	std::string		ChipID;
 	int				FlashSize;
 	bool			EraseAll;
-	bool			DoVerify;
 
 	Options()
-		: FlashSize(16*1024), EraseAll(false), DoVerify(true)
+		: FlashSize(16*1024), EraseAll(false)
 	{}
 };
 
@@ -114,7 +114,13 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 
 			break;
 		case 'v':
-			opt.DoVerify = false;
+			++c;
+
+			if (c < argc)
+				opt.VerifyWith = argv[c];
+			else
+				throw std::string("Invalid HEX file name.");
+				
 			break;
 		default:
 			throw std::string("Invalid command line option: -") + argv[c][1];
@@ -166,11 +172,15 @@ void DoProg(const Options& opt)
 	{
 		prg.EraseAll();
 	} else if (!opt.WriteMBFrom.empty()) {
-		prg.WriteMainBlock(opt.WriteMBFrom, opt.DoVerify);
+		prg.WriteMainBlock(opt.WriteMBFrom);
+		prg.VerifyMainBlock(opt.WriteMBFrom);
 		printf("\nMainBlock flash written from %s\n", opt.WriteMBFrom.c_str());
 	} else if (!opt.ReadMBInto.empty()) {
 		prg.ReadMainBlock(opt.ReadMBInto);
 		printf("\nMainBlock contents saved into %s\n", opt.ReadMBInto.c_str());
+	} else if (!opt.VerifyWith.empty()) {
+		prg.VerifyMainBlock(opt.VerifyWith);
+		printf("\nMainBlock flash verified with %s\n", opt.VerifyWith.c_str());
 	} else if (!opt.ReadIPInto.empty()) {
 		prg.ReadInfoPage(opt.ReadIPInto);
 		printf("\nInfoPage contents saved into %s\n", opt.ReadIPInto.c_str());

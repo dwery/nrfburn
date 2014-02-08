@@ -224,6 +224,8 @@ void Programmer::Open()
 
 void Programmer::EraseAll()
 {
+	ProgressBar pb("Erase all");
+	
 	// send ERASE_ALL request
 	req_simple_t req;
 	req.length = sizeof req;
@@ -231,12 +233,16 @@ void Programmer::EraseAll()
 	reqSetChecksum(req);
 	hidBurn.Write(req);
 
+	pb.Refresh(0.5);
+	
 	// validate response
 	resp_simple_t resp;
 	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqEraseAll))
 		throw std::string("Unexpected response from programmer in EraseAll()");
+
+	pb.Refresh(1);
 }
 
 void Programmer::WriteChunk(const bool isInfoPage, const FlashMemory& flash, const int offset)
@@ -346,64 +352,69 @@ void Programmer::ReadInfoPage(const std::string& hexfilename)
 	flash.SaveHex(hexfilename);
 }
 
-void Programmer::WriteMainBlock(const std::string& hexfilename, const bool verify)
+void Programmer::WriteMainBlock(const std::string& hexfilename)
 {
 	FlashMemory flash(flashSize);
 	
 	flash.LoadHex(hexfilename);		// read the HEX file
 
 	// do the flash writing
+	ProgressBar pg("Writing");
+	
+	EraseAll();			// erase the chip's MainBlock
+
+	// start writing the flash
+	int address = 0;
+	while (address < flash.GetFlashSize())
 	{
-		ProgressBar pg("Reading");
-		
-		EraseAll();			// erase the chip's MainBlock
+		const uint8_t* pChunk = flash.GetFlash() + address;
 
-		// start writing the flash
-		int address = 0;
-		while (address < flash.GetFlashSize())
+		// Check all the bytes of the chunk to see if we have any non-0xff bytes. This is
+		// good because we don't want to waste time sending an empty block for programming.
+		int bytes = 0, c;
+		for (c = 0; c < PROG_CHUNK_SIZE; c++)
 		{
-			const uint8_t* pChunk = flash.GetFlash() + address;
-
-			// do we have a non-empty block?
-			int bytes = 0, c;
-			for (c = 0; c < PROG_CHUNK_SIZE; c++)
-			{
-				if (pChunk[bytes] != 0xff)
-					bytes = c + 1;
-			}
-
-			// do we have a non-empty block?
-			if (bytes)
-				WriteChunk(false, flash, address);
-
-			address += PROG_CHUNK_SIZE;
-
-			// update the progress bar
-			pg.Refresh(address / double(flash.GetFlashSize()));
+			if (pChunk[c] != 0xff)
+				bytes = c + 1;
 		}
+
+		// do we have a non-empty block?
+		if (bytes)
+			WriteChunk(false, flash, address);
+
+		address += PROG_CHUNK_SIZE;
+
+		// update the progress bar
+		pg.Refresh(address / double(flash.GetFlashSize()));
 	}
-		
-	// run a verify if requested
-	if (verify)
+}
+
+void Programmer::VerifyMainBlock(const std::string& hexfilename)
+{
+	ProgressBar pg("Verifying");
+	
+	FlashMemory flash(flashSize);
+	flash.LoadHex(hexfilename);		// read the HEX file
+	
+	FlashMemory verifyFlash(flashSize);
+
+	int address = 0;
+	while (address < flashSize)
 	{
-		ProgressBar pg("Verifying");
-		
-		FlashMemory verifyFlash(flashSize);
+		ReadChunk(false, verifyFlash, address);
 
-		int address = 0;
-		while (address < flashSize)
-		{
-			ReadChunk(false, verifyFlash, address);
+		address += PROG_CHUNK_SIZE;
 
-			address += PROG_CHUNK_SIZE;
+		// update the progress bar
+		pg.Refresh(address / double(flashSize));
+	}
 
-			// update the progress bar
-			pg.Refresh(address / double(flashSize));
-		}
-
-		// now compare
-		if (flash != verifyFlash)
-			throw std::string("Verification failed.");
+	// now compare
+	if (flash != verifyFlash)
+	{
+		/*flash.SaveHex("orig.hex");
+		verifyFlash.SaveHex("verif.hex");*/
+		throw std::string("MainBlock verification failed.");
 	}
 }
 
