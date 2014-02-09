@@ -57,12 +57,8 @@
 #define INT_EP5IN    0x40
 #define INT_EP5OUT   0x44
 
-
 #define USB_BM_STATE_CONFIGURED           0x01
 #define USB_BM_STATE_ALLOW_REMOTE_WAKEUP  0x02
-
-#define MAX_PACKET_SIZE_EP0		0x20
-#define USB_EP1_SIZE			0x80
 
 typedef enum 
 {
@@ -73,3 +69,6 @@ typedef enum
     CONFIGURED,
     SUSPENDED
 } usb_state_t;
+
+#define MAX_PACKET_SIZE_EP0		0x40
+#define USB_EP1_SIZE			0x08

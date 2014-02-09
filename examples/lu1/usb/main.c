@@ -11,6 +11,7 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+/*
 volatile __xdata __at (0xC440) uint8_t out5buf[USB_EP_DEFAULT_BUF_SIZE];
 volatile __xdata __at (0xC480) uint8_t in5buf[USB_EP_DEFAULT_BUF_SIZE];
 volatile __xdata __at (0xC4C0) uint8_t out4buf[USB_EP_DEFAULT_BUF_SIZE];
@@ -19,10 +20,11 @@ volatile __xdata __at (0xC540) uint8_t out3buf[USB_EP_DEFAULT_BUF_SIZE];
 volatile __xdata __at (0xC580) uint8_t in3buf[USB_EP_DEFAULT_BUF_SIZE];
 volatile __xdata __at (0xC5C0) uint8_t out2buf[USB_EP_DEFAULT_BUF_SIZE];
 volatile __xdata __at (0xC600) uint8_t in2buf[USB_EP_DEFAULT_BUF_SIZE];
-volatile __xdata __at (0xC640) uint8_t out1buf[USB_EP_DEFAULT_BUF_SIZE];
-volatile __xdata __at (0xC680) uint8_t in1buf[USB_EP_DEFAULT_BUF_SIZE];
-volatile __xdata __at (0xC6C0) uint8_t out0buf[USB_EP_DEFAULT_BUF_SIZE];
-volatile __xdata __at (0xC700) uint8_t in0buf[USB_EP_DEFAULT_BUF_SIZE];
+*/
+volatile __xdata __at (0xC640) uint8_t out1buf[USB_EP1_SIZE];
+volatile __xdata __at (0xC680) uint8_t in1buf[USB_EP1_SIZE];
+volatile __xdata __at (0xC6C0) uint8_t out0buf[MAX_PACKET_SIZE_EP0];
+volatile __xdata __at (0xC700) uint8_t in0buf[MAX_PACKET_SIZE_EP0];
 volatile __xdata __at (0xC760) uint8_t out8data;
 volatile __xdata __at (0xC768) uint8_t in8data;
 volatile __xdata __at (0xC770) uint8_t out8bch;
@@ -102,6 +104,7 @@ void usbInit(void)
 
 	// set up interrupts and clear interrupt flags
 	usbien = 0b00011001;	// bit	description
+							// 5-7	unused
 							// 4	uresie	USB reset interrupt enable
 							// 3	suspie	USB suspend interrupt enable
 							// 2	sutokie	SETUP token interrupt enable
@@ -144,9 +147,8 @@ static void packetizer_isr_ep0_in()
 
 	if (packetizer_data_size == 0)
 	{
-		// We are getting a ep0in interrupt when the host sends ACK and do not
-		//   have any more data to send
-		// Arm the in0bsy bit by writing to byte count reg
+		// We are getting a ep0in interrupt when the host sends ACK and do not have
+		// any more data to send. Arm the in0bsy bit by writing to byte count reg
 		in0bc = 0;
 		// ACK the status stage
 		USB_EP0_HSNAK();
@@ -172,12 +174,15 @@ static void usb_process_get_descriptor()
 {
 	uint8_t descriptor = setupbuf[3];
 	packetizer_data_ptr = 0;
+	packetizer_data_size = 0;
 	
 	if (descriptor == USB_DESC_DEVICE)
 	{
 		packetizer_data_ptr = (__code uint8_t*) &usb_dev_desc;
+		packetizer_data_size = MIN(setupbuf[6], packetizer_data_ptr[0]);
 	} else if (descriptor == USB_DESC_CONFIGURATION) {
 		packetizer_data_ptr = (__code uint8_t*) &usb_conf_desc;
+		packetizer_data_size = MIN(setupbuf[6], sizeof usb_conf_desc);
 	} else if (descriptor == USB_DESC_STRING) {
 
 		uint8_t string_id = setupbuf[2];
@@ -189,18 +194,22 @@ static void usb_process_get_descriptor()
 				packetizer_data_ptr = usb_string_desc_0;
 			else if (string_id == 1)
 				packetizer_data_ptr = (__code uint8_t*) usb_string_desc_1;
-			else
+			else if (string_id == 2)
 				packetizer_data_ptr = (__code uint8_t*) usb_string_desc_2;
+			else
+				packetizer_data_ptr = (__code uint8_t*) usb_string_desc_3;
+
+			packetizer_data_size = MIN(setupbuf[6], packetizer_data_ptr[0]);
 		}
+	} else if (descriptor == USB_DESC_HID_REPORT) {
+		packetizer_data_ptr = usb_hid_report_descriptor;
+		packetizer_data_size = MIN(setupbuf[6], USB_HID_REPORT_DESCRIPTOR_SIZE);
 	}
 
 	if (packetizer_data_ptr)
-	{
-		packetizer_data_size = MIN(setupbuf[6], packetizer_data_ptr[0]);
 		packetizer_isr_ep0_in();
-	} else {
+	else
 		USB_EP0_STALL();
-	}
 }
 
 static void usb_std_device_request()
@@ -277,53 +286,59 @@ static void usb_std_device_request()
 
 static void usb_std_endpoint_request()
 {
-	switch( setupbuf[1] ) // bRequest
+	uint8_t bRequest = setupbuf[1];
+	
+	if (bRequest == USB_REQ_GET_STATUS)
 	{
-	case USB_REQ_GET_STATUS:
-		if ( usb_state == CONFIGURED )
+		if (usb_state == CONFIGURED)
 		{
 			// Return Halt feature status
-			if ( setupbuf[4] == 0x81 )
+			if (setupbuf[4] == 0x81)
 				in0buf[0] = in1cs & 0x01;
-			else if ( setupbuf[4] == 0x82 )
+			else if (setupbuf[4] == 0x82)
 				in0buf[0] = in2cs & 0x01;
-			else if ( setupbuf[4] == 0x01 )
+			else if (setupbuf[4] == 0x01)
 				in0buf[0] = out1cs & 0x01;
+
 			in0bc = 0x02;
 		}
-		break;
-
-	default:
+	} else {
 		USB_EP0_STALL();
 	}
 }
 
 static void usb_std_interface_request()
 {
-	switch( setupbuf[1] ) // bRequest
+	uint8_t bRequest = setupbuf[1];
+	
+	if (bRequest == USB_REQ_GET_STATUS)
 	{
-	case USB_REQ_GET_STATUS:
-		if ( usb_state == CONFIGURED )
+		if (usb_state == CONFIGURED)
 		{
 			// All values are reserved for interfaces
 			in0buf[0] = 0x00;
 			in0buf[1] = 0x00;
 			in0bc = 0x02;
 		}
-		break;
-
-	default:
+	} else if (bRequest == USB_REQ_GET_DESCRIPTOR) {
+		// this requests the HID report descriptor
+		usb_process_get_descriptor();
+	} else {
 		USB_EP0_STALL();
 	}
 }
 
+// called when received a SETUP packet with data
 static void isr_sudav()
 {
 	// setupbuf[0] is bmRequestType
 	uint8_t requestType = setupbuf[0] & 0x60;
 
-	// if standard request
-	if (requestType == 0x00)	
+	// reset the ep0 packetizer
+	packetizer_data_ptr = 0;
+	packetizer_data_size = 0;
+	
+	if (requestType == 0x00)		// standard request
 	{
 		uint8_t recipient = setupbuf[0] & 0x1f;
 		if (recipient == 0)			// device
@@ -334,40 +349,43 @@ static void isr_sudav()
 			usb_std_endpoint_request();
 		else
 			USB_EP0_STALL();
+	//} else if (requestType == 0x20) {	// class request
+	//} else if (requestType == 0x40) {	// vendor request
 	} else {
 		// stall on unsupported requests
 		USB_EP0_STALL();
 	}
 }
 
-bool usb_irq(void)
+bool usbPoll(void)
 {
 	bool ret = false;
+	
+	if (!USBF)
+		return ret;
+
+	// clear USB interrupt
+	USBF = 0;
 
 	switch (ivec)
 	{
-	case INT_USBRESET:	// Bus reset
-		usbirq = 0x10;	// clear interrupt flag
-		// Reset internal states
-		usb_state = DEFAULT;
-		usb_current_config = 0;
-		break;
 	case INT_SUDAV:		// SETUP data packet
 		usbirq = 0x01;	// clear interrupt flag
-		// Process setup data
-		isr_sudav();
+		isr_sudav();	// process setup data
 		break;
-	/*case INT_SOF:		// Start of Frame packet
+	case INT_SOF:		// SOF packet
 		usbirq = 0x02;	// clear interrupt flag
 		break;
-	case INT_SUTOK:		// Setup token
+	case INT_SUTOK:		// setup token
 		usbirq = 0x04;	// clear interrupt flag
-		// Clear EP0 IN data pointers
-		packetizer_data_ptr = 0;
-		packetizer_data_size = 0;*/
 		break;
 	case INT_SUSPEND:	// SUSPEND signal
 		usbirq = 0x08;	// clear interrupt flag
+		break;
+	case INT_USBRESET:	// USB bus reset
+		usbirq = 0x10;	// clear interrupt flag
+		usb_state = DEFAULT;	// reset internal states
+		usb_current_config = 0;
 		break;
 	case INT_EP0IN:
 		in_irq = 0x01;	// clear interrupt flag
@@ -384,7 +402,7 @@ bool usb_irq(void)
 		break;
 	case INT_EP1OUT:
 		out_irq = 0x02;	// clear interrupt flag
-		// Set packet rx flag
+		// set packet rx flag
 		ret = true;
 		break;
 	}
@@ -394,46 +412,32 @@ bool usb_irq(void)
 
 void main()
 {
-	// All pins inputs
-	P0DIR = 0xff;
-	// All GPIO default behavior
-	P0ALT = 0x00;
+	P0DIR = 0x00;	// all outputs
+	P0ALT = 0x00;	// all GPIO default behavior
 
-	// Initialize USB
 	usbInit();
 
 	for (;;)
 	{
-		// Check for USB interrupt
-		if (USBF)
+		if (usbPoll())
 		{
-			// Clear USB interrupt
-			USBF = 0;
-
-			// Process interrupt
-			if ( usb_irq() )
+			/*
+			if (out1buf[0] == 1)
 			{
-				switch(out1buf[0])
-				{
-					case 1:
-					/*
-						// Copy RF data into USB controller RAM
-						in1buf[0] = rx_data[0];
-						in1buf[1] = rx_data[1];
-						in1buf[2] = rx_data[2];
-						in1buf[3] = rx_data[3];
-						in1buf[4] = rx_cnt;
-						*/
-						// Setting byte count sets in1cs busy flag
-						in1bc = 5;
-						break;
-					default:
-						break;
-				}
-
-				// Write to byte count to re-arm EP for next transfer
-				out1bc = 0xff;
+				// Copy RF data into USB controller RAM
+				in1buf[0] = rx_data[0];
+				in1buf[1] = rx_data[1];
+				in1buf[2] = rx_data[2];
+				in1buf[3] = rx_data[3];
+				in1buf[4] = rx_cnt;
+				// Setting byte count sets in1cs busy flag
+				in1bc = 5;
+			} else {
 			}
+			*/
+
+			// Write to byte count to re-arm EP for next transfer
+			out1bc = 0xff;
 		}
 	}
 }

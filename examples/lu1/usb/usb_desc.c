@@ -7,22 +7,22 @@ __code const usb_dev_desc_t usb_dev_desc =
 	sizeof(usb_dev_desc_t),
 	USB_DESC_DEVICE, 
 	0x0200,					// bcdUSB
-	0x00,					// bDeviceClass		- deferred to interface
-	0x00,					// bDeviceSubclass
-	0x00,					// bDeviceProtocol
+	0,						// bDeviceClass		- deferred to interface
+	0,						// bDeviceSubclass
+	0,						// bDeviceProtocol
 	MAX_PACKET_SIZE_EP0,	// bMaxPacketSize0
-	0x0925,					// idVendor - (0x0925) : Lakeview Research
-	0x9000,					// idProduct
-	0x0001,					// bcdDevice - Device Release Number (BCD)
-	0x01,					// iManufacturer
-	0x02,					// iProduct
-	0x00,					// iSerialNumber
-	0x01,					// bNumConfigurations
+	0x40aa,					// idVendor			- some unknown vendor id
+	0x9002,					// idProduct
+	0x0001,					// bcdDevice
+	1,						// iManufacturer
+	2,						// iProduct
+	3,						// iSerialNumber
+	1,						// bNumConfigurations
 };
 
 // the default keyboard descriptor - compatible with keyboard boot protocol 
 // taken from the HID Descriptor Tool
-__code const uint8_t usb_hid_report_descriptor[] =
+__code const uint8_t usb_hid_report_descriptor[USB_HID_REPORT_DESCRIPTOR_SIZE] =
 {
 	0x05, 0x01,			// USAGE_PAGE (Generic Desktop)
 	0x09, 0x06,			// USAGE (Keyboard)
@@ -78,17 +78,17 @@ __code const usb_conf_desc_keyboard_t usb_conf_desc =
 		0,		// bInterfaceNumber
 		0,		// bAlternateSetting
 		1,		// bNumEndpoints
-		0x03,	// bInterfaceClass		- HID
-		0x01,	// bInterfaceSubClass  	- Boot
-		0x01,	// bInterfaceProtocol	- Keyboard
-		0x00,	// iInterface
+		3,		// bInterfaceClass		- HID
+		1,		// bInterfaceSubClass  	- Boot
+		1,		// bInterfaceProtocol	- Keyboard
+		0,		// iInterface
 	},
 	// HID descriptor
 	{
 		sizeof(usb_hid_desc_t),
 		USB_DESC_HID,
-		0x0101,					// bcdHID
-		0x00,					// bCountryCode
+		0x0111,					// bcdHID
+		0,						// bCountryCode
 		1,						// bNumDescriptors
 		USB_DESC_HID_REPORT,	// bDescriptorType_HID
 		sizeof(usb_hid_report_descriptor),	// wDescriptorLength
@@ -100,21 +100,27 @@ __code const usb_conf_desc_keyboard_t usb_conf_desc =
 		0x81,				// bEndpointAddress
 		USB_EP_TYPE_INT,	// bmAttributes
 		USB_EP1_SIZE,		// wMaxPacketSize
-		0x06,				// bInterval
+		10,					// bInterval		10ms
 	},
 };
 
-// This is for setting language American English (String descriptor 0 is an array of supported languages):
+// string table 
 __code const uint8_t usb_string_desc_0[] = {0x04, 0x03, 0x09, 0x04};
 
-__code const uint16_t usb_string_desc_1[] = 
+__code const uint16_t usb_string_desc_1[] =
 {
-	(sizeof(usb_string_desc_1) << 8) | 0x03,		// length and string descriptor ID
+	0x0300 | sizeof(usb_string_desc_1),		// string descriptor ID and length
 	'F','e','r','e','n','c',' ','S','z','i','l','i'
 };
 
-__code const uint16_t usb_string_desc_2[] = 
+__code const uint16_t usb_string_desc_2[] =
 {
-	(sizeof(usb_string_desc_2) << 8) | 0x03,		// length and string descriptor ID
-	'U','S','B',' ','K','e','y','b','o','a','r','d',' ','D','e','m','o'
+	0x0300 | sizeof(usb_string_desc_2),		// string descriptor ID and length
+	'n','R','F','2','4','L','U','1','+',' ','K','e','y','b','o','a','r','d',' ','D','e','m','o'
+};
+
+__code const uint16_t usb_string_desc_3[] =
+{
+	0x0300 | sizeof(usb_string_desc_3),		// string descriptor ID and length
+	'0','.','1','2','2','3','4','1'
 };

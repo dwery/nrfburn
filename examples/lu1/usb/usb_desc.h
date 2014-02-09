@@ -4,6 +4,15 @@
 
 typedef struct
 {
+	uint8_t		bmRequestType;
+	uint8_t		bRequest;
+	uint16_t	wValue;
+	uint16_t	wIndex;
+	uint16_t	wLength;
+} usb_request_t;
+
+typedef struct
+{
 	uint8_t		bLength;
 	uint8_t		bDescriptorType;
 	uint16_t	bcdUSB;
@@ -74,11 +83,13 @@ typedef struct
     usb_ep_desc_t	ep1in;
 } usb_conf_desc_keyboard_t;
 
-#define USB_STRING_DESC_COUNT 3
+#define USB_STRING_DESC_COUNT			4
+#define USB_HID_REPORT_DESCRIPTOR_SIZE	0x3f
 
 extern __code const usb_conf_desc_keyboard_t usb_conf_desc;
 extern __code const usb_dev_desc_t usb_dev_desc;
-extern __code const uint8_t  usb_string_desc_0[4];
+extern __code const uint8_t  usb_string_desc_0[];
 extern __code const uint16_t usb_string_desc_1[];
 extern __code const uint16_t usb_string_desc_2[];
-extern __code const uint8_t usb_hid_report_descriptor[];
+extern __code const uint16_t usb_string_desc_3[];
+extern __code const uint8_t usb_hid_report_descriptor[USB_HID_REPORT_DESCRIPTOR_SIZE];
