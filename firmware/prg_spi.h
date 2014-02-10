@@ -47,3 +47,6 @@ void ProgSpiRDISIP(void);
 
 // disable MainBlock readback - datasheet 17.7.1.10
 void ProgSpiRDISMB(void);
+
+// pulls low the target reset line for 10ms
+void ProgSpiResetTarget(void);

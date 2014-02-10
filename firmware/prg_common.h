@@ -47,6 +47,7 @@ enum request_code_e
 	reqEraseAll			= 0x0B,
 	reqDisReadMainBlock	= 0x0C,
 	reqDisReadInfoPage	= 0x0D,
+	reqResetTarget		= 0x0E,
 };
 
 enum response_code_e

@@ -13,6 +13,40 @@ typedef struct
 
 typedef struct
 {
+	uint8_t		bmRequestType;
+	uint8_t		bRequest;
+	uint8_t		wValueLSB;
+	uint8_t		wValueMSB;
+	uint8_t		wIndexLSB;
+	uint8_t		wIndexMSB;
+	uint8_t		wLengthLSB;
+	uint8_t		wLengthMSB;
+} usb_request_value_t;
+
+typedef struct
+{
+	uint8_t		bmRequestType;
+	uint8_t		bRequest;
+	uint8_t		descIndex;
+	uint8_t		descType;
+	uint16_t	langID;
+	uint8_t		lengthLSB;
+	uint8_t		lengthMSB;
+} usb_req_std_get_desc_t;
+
+typedef struct
+{
+	uint8_t		bmRequestType;
+	uint8_t		bRequest;
+	uint8_t		descIndex;
+	uint8_t		descType;
+	uint8_t		interface;
+	uint8_t		filler;
+	uint16_t	wLength;
+} usb_req_hid_get_desc_t;
+
+typedef struct
+{
 	uint8_t		bLength;
 	uint8_t		bDescriptorType;
 	uint16_t	bcdUSB;

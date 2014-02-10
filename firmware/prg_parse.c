@@ -275,6 +275,10 @@ void prgValidate(void)
 		if (!ProgSpiWaitForRDYN(1))
 			setTimeoutResponse();
 		break;
+		
+	case reqResetTarget:
+		ProgSpiResetTarget();
+		break;
 	}
 
 	prgPrepareResponse();

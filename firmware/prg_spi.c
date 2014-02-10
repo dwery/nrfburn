@@ -60,10 +60,10 @@ static void ProgDisableSPI(void)
 	ClrBit(PORT(MISO_PORT), MISO_BIT);
 }
 
-static void ProgSpiResetTarget(void)
+void ProgSpiResetTarget(void)
 {
 	ClrBit(PORT(TGT_RST_PORT), TGT_RST_BIT);
-	_delay_ms(1);
+	_delay_ms(10);
 	SetBit(PORT(TGT_RST_PORT), TGT_RST_BIT);
 }
 
