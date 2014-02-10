@@ -171,11 +171,11 @@ static void readFlash(void)
 		respBuffer.simple.length = sizeof respBuffer.simple;
 }
 
-static void setTimeoutResponse(void)
+static void setErrorResponse(uint8_t errorCode)
 {
 	respBuffer.error.length = sizeof respBuffer.error;
 	respBuffer.error.response = respError;
-	respBuffer.error.error_code = respErrTimeoutExpired;
+	respBuffer.error.error_code = errorCode;
 }
 
 static void writeFlash(void)
@@ -195,7 +195,7 @@ static void writeFlash(void)
 	
 	// wait for confirmation
 	if (!ProgSpiWaitForRDYN(PROGRAM_CHUNK_TIMEOUT))
-		setTimeoutResponse();
+		setErrorResponse(respErrTimeoutExpired);
 }
 
 static void erasePage(void)
@@ -209,7 +209,7 @@ static void erasePage(void)
 
 	ProgSpiERASE_PAGE(reqBuffer.erasePage.page_num);
 	if (!ProgSpiWaitForRDYN(ERASE_PAGE_TIMEOUT))
-		setTimeoutResponse();
+		setErrorResponse(respErrTimeoutExpired);
 }
 
 void prgValidate(void)
@@ -254,7 +254,7 @@ void prgValidate(void)
 		ProgSpiWREN();
 		ProgSpiERASE_ALL();
 		if (!ProgSpiWaitForRDYN(ERASE_ALL_TIMEOUT))
-			setTimeoutResponse();
+			setErrorResponse(respErrTimeoutExpired);
 		break;
 		
 	case reqErasePageMB:
@@ -266,18 +266,24 @@ void prgValidate(void)
 		ProgSpiWREN();
 		ProgSpiRDISMB();
 		if (!ProgSpiWaitForRDYN(1))
-			setTimeoutResponse();
+			setErrorResponse(respErrTimeoutExpired);
 		break;
 		
 	case reqDisReadInfoPage:
 		ProgSpiWREN();
 		ProgSpiRDISIP();
 		if (!ProgSpiWaitForRDYN(1))
-			setTimeoutResponse();
+			setErrorResponse(respErrTimeoutExpired);
 		break;
 		
 	case reqResetTarget:
 		ProgSpiResetTarget();
+		break;
+	
+	default:
+		// none of the above - return an error
+		setErrorResponse(respErrUnknownRequest);
+		
 		break;
 	}
 

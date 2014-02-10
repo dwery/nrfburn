@@ -210,7 +210,10 @@ void Programmer::Open()
 	hidBurn.Open();
 
 	CheckProgrammerVer();
+}
 
+void Programmer::BeginProgramming()
+{
 	// in case the last programming session ended before a ProgEnd
 	// due to a crash or Ctrl-Break
 	ProgEnd();
@@ -310,7 +313,7 @@ void Programmer::ReadMainBlock(const std::string& hexfilename)
 	if (!CanReadMainBlock())
 		throw std::string("MainBlock readback is disabled by the target configuration.");
 
-	ProgressBar pg("Reading");
+	ProgressBar pb("Reading");
 
 	FlashMemory flash(flashSize);
 
@@ -322,7 +325,7 @@ void Programmer::ReadMainBlock(const std::string& hexfilename)
 		address += PROG_CHUNK_SIZE;
 
 		// update the progress bar
-		pg.Refresh(address / double(flash.GetFlashSize()));
+		pb.Refresh(address / double(flash.GetFlashSize()));
 	}
 
 	// now save everything
@@ -359,7 +362,7 @@ void Programmer::WriteMainBlock(const std::string& hexfilename)
 	flash.LoadHex(hexfilename);		// read the HEX file
 
 	// do the flash writing
-	ProgressBar pg("Writing");
+	ProgressBar pb("Writing MB");
 	
 	EraseAll();			// erase the chip's MainBlock
 
@@ -385,13 +388,13 @@ void Programmer::WriteMainBlock(const std::string& hexfilename)
 		address += PROG_CHUNK_SIZE;
 
 		// update the progress bar
-		pg.Refresh(address / double(flash.GetFlashSize()));
+		pb.Refresh(address / double(flash.GetFlashSize()));
 	}
 }
 
 void Programmer::VerifyMainBlock(const std::string& hexfilename)
 {
-	ProgressBar pg("Verifying");
+	ProgressBar pb("Verifying");
 	
 	FlashMemory flash(flashSize);
 	flash.LoadHex(hexfilename);		// read the HEX file
@@ -406,7 +409,7 @@ void Programmer::VerifyMainBlock(const std::string& hexfilename)
 		address += PROG_CHUNK_SIZE;
 
 		// update the progress bar
-		pg.Refresh(address / double(flashSize));
+		pb.Refresh(address / double(flashSize));
 	}
 
 	// now compare
@@ -440,6 +443,8 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 	// we must do this for the chip to allow an InfoPage erase
 	EraseAll();
 
+	ProgressBar pb("Writing IP");
+	
 	// send the erase page command
 	req_erase_page_t erasePage;
 	erasePage.page_num = 0;
@@ -448,6 +453,8 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 	reqSetChecksum(erasePage);
 	hidBurn.Write(erasePage);
 
+	pb.Refresh(0.3);
+	
 	// validate the response
 	resp_simple_t resp;
 	ReadResponse1(resp);
@@ -465,9 +472,37 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 	reqSetChecksum(writeFlash);
 	hidBurn.Write(writeFlash);
 
+	pb.Refresh(0.6);
+	
 	// validate
 	ReadResponse1(resp);
 
 	if (resp.response != req2resp(reqWriteInfoPage))
 		throw std::string("Unexpected response from programmer while writing page in WriteInfoPage()");
+		
+	pb.Refresh(1);
+}
+
+void Programmer::ResetTarget()
+{
+	ProgressBar pb("Resetting");
+
+	pb.Refresh(0.3);
+	
+	req_simple_t resetTarget;
+	resetTarget.length = sizeof resetTarget;
+	resetTarget.request = reqResetTarget;
+	reqSetChecksum(resetTarget);
+	hidBurn.Write(resetTarget);
+
+	pb.Refresh(0.6);
+	
+	// validate
+	resp_simple_t resp;
+	ReadResponse1(resp);
+
+	if (resp.response != req2resp(resetTarget.request))
+		throw std::string("Unexpected response from programmer during ResetTarget()");
+	
+	pb.Refresh(1);
 }

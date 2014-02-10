@@ -12,24 +12,8 @@
 
 void PrintHelp()
 {
-	printf("nrfburn v0.1   build %s %s\n", __DATE__, __TIME__);
-	printf("Usage: nrfburn [options]\n");
-	printf("Options:\n");
-	printf("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.\n");
-	printf("                   Default is 16kB.\n");
-	printf("  -w <filename>    Write contents of HEX file to nRF target MainBlock flash.\n");
-	printf("                   Automatically performs a chip erase before programming.\n");
-	printf("                   Does a verification pass after writing is complete.\n");
-	printf("  -v <filename>    Verify nRF target MainBlock with contents of HEX file.\n");
-	printf("  -r <filename>    Read nRF target MainBlock into HEX file.\n");
-	printf("  -p <filename>    Read nRF target InfoPage into HEX file.\n");
-	printf("  -e               Perform a chip erase. This erases only the MainBlock, \n");
-	printf("                   and leaves the InfoPage intact.\n");
-	printf("  -i <chipID>      Erase the InfoPage and write the specified chip ID.\n");
-	printf("                   This also performs a chip erase.\n");
-	printf("                   chipID must be in the format xx-xx-xx-xx-xx\n");
-	printf("                   where x is a hex digit.\n");
-	printf("\n");
+	printf("nrfburn v0.1  build %s %s\n", __DATE__, __TIME__);
+	puts("Usage: nrfburn [options]");	puts("Options:");	puts("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.");	puts("                   Default is 16kB.");	puts("  -w <filename>    Write contents of HEX file to nRF target MainBlock flash.");	puts("                   Automatically performs a chip erase before programming.");	puts("                   Does a verification pass after writing is complete.");	puts("  -v <filename>    Verify nRF target MainBlock with contents of HEX file.");	puts("  -r <filename>    Read nRF target MainBlock into HEX file.");	puts("  -p <filename>    Read nRF target InfoPage into HEX file.");	puts("  -e               Perform a chip erase. This erases only the MainBlock, ");	puts("                   and leaves the InfoPage intact.");	puts("  -i <chipID>      Erase the InfoPage and write the specified chip ID.");	puts("                   This also performs a chip erase.");	puts("                   chipID must be in the format xx-xx-xx-xx-xx");	puts("                   where x is a hex digit.");	puts("  -s               Reset the target nRF chip.");	puts("");
 }
 
 struct Options
@@ -41,9 +25,10 @@ struct Options
 	std::string		ChipID;
 	int				FlashSize;
 	bool			EraseAll;
+	bool			ResetTarget;
 
 	Options()
-		: FlashSize(16*1024), EraseAll(false)
+		: FlashSize(16*1024), EraseAll(false), ResetTarget(false)
 	{}
 };
 
@@ -122,6 +107,11 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 				throw std::string("Invalid HEX file name.");
 				
 			break;
+			
+		case 's':
+			opt.ResetTarget = true;
+			break;
+			
 		default:
 			throw std::string("Invalid command line option: -") + argv[c][1];
 			break;
@@ -140,13 +130,24 @@ std::string int2str(const int i)
 
 void DoProg(const Options& opt)
 {
-	// open the port
+	// open the programmer
 	Programmer prg(opt.FlashSize);
 
-	printf("\nOpening programmer and reading Flash registers\n");
-
+	printf("\nOpening programmer\n");
 	prg.Open();
-
+	
+	// just reset the target and return
+	if (opt.ResetTarget)
+	{
+		puts("");
+		prg.ResetTarget();
+		puts("\nTarget has been reset.");
+		return;
+	}	
+	
+	puts("Reading Flash registers");
+	prg.BeginProgramming();
+	
 	// print the FSR and FPCR
 	printf("\nnRF device flash registers:\n");
 	printf("FPCR = 0x%02x\n", prg.GetFPCR());

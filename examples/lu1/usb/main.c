@@ -75,7 +75,6 @@ volatile __xdata __at (0xC7CE) uint8_t out5cs;
 volatile __xdata __at (0xC7CF) uint8_t out5bc;
 volatile __xdata __at (0xC7D6) uint8_t usbcs;
 volatile __xdata __at (0xC7D7) uint8_t togctl;
-volatile __xdata __at (0xC7D8) uint16_t usbframe;
 volatile __xdata __at (0xC7D8) uint8_t usbframel;
 volatile __xdata __at (0xC7D9) uint8_t usbframeh;
 volatile __xdata __at (0xC7DB) uint8_t fnaddr;
@@ -97,11 +96,16 @@ volatile __xdata __at (0xC7E8) usb_req_hid_get_desc_t	usbReqHidGetDesc;
 volatile __xdata __at (0xC7F0) uint8_t out8addr;
 volatile __xdata __at (0xC7F8) uint8_t in8addr;
 
-static uint8_t usb_current_config;
-static usb_state_t usb_state;
+static uint8_t		usb_current_config;
+static usb_state_t	usb_state;
 
 static __code const uint8_t* packetizer_data_ptr;
 static uint8_t packetizer_data_size;
+
+// We are counting SOF packets as a timer for the HID idle rate.
+// usbframel & usbframeh are not good enough for this because of
+// difficulty accesing both registers
+static uint16_t usbFrameCnt = 0;
 
 void usbInit(void)
 {
@@ -111,7 +115,7 @@ void usbInit(void)
 	usbcs &= ~0x08;
 
 	// set up interrupts and clear interrupt flags
-	usbien = 0b00011001;	// bit	description
+	usbien = 0b00011011;	// bit	description
 							// 5-7	unused
 							// 4	uresie	USB reset interrupt enable
 							// 3	suspie	USB suspend interrupt enable
@@ -181,22 +185,18 @@ void packetizer_isr_ep0_in(void)
 bool hasIdlePassed(uint8_t idleInterval)
 {
 	static uint16_t started;
-	uint16_t passed_ms, currFrame;
 	bool retVal = false;
 	
 	if (idleInterval == 0)
 	{
-		started = usbframe;
+		started = usbFrameCnt;
 		return retVal;
 	}
 	
-	currFrame = usbframe;
-	passed_ms = (currFrame - started) & 0x03ff;
-	
-	retVal = passed_ms >= idleInterval * 4;
+	retVal = usbFrameCnt - started >= idleInterval * 4;
 	
 	if (retVal)
-		started = currFrame;
+		started = usbFrameCnt;
 	
 	return retVal;
 }
@@ -396,10 +396,11 @@ bool usbPoll(void)
 		usbirq = 0x01;	// clear interrupt flag
 		usbRequestReceived();	// process setup data
 		break;
-	/*
 	case INT_SOF:		// SOF packet
 		usbirq = 0x02;	// clear interrupt flag
+		++usbFrameCnt;
 		break;
+	/*
 	case INT_SUTOK:		// setup token
 		usbirq = 0x04;	// clear interrupt flag
 		break;
@@ -449,7 +450,7 @@ void main()
 	{
 		usbPoll();
 		
-		if (hasIdlePassed(10))
+		if (hasIdlePassed(250))
 			P00 = P00 ? 0 : 1;
 	}
 }

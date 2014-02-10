@@ -63,6 +63,7 @@ enum response_error_codes_e
 {
 	respErrBadChecksum		= 0x00,
 	respErrTimeoutExpired	= 0x01,
+	respErrUnknownRequest	= 0x02,
 };
 
 // number of bytes to write or read in one chunk

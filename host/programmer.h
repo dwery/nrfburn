@@ -61,6 +61,7 @@ public:
 	// opens the programmer device, checks the programmer version,
 	// starts the programming, reads the flash status registers
 	void Open();
+	void BeginProgramming();
 
 	uint8_t GetFSR() const		{ return fsr; }
 	uint8_t GetFPCR() const		{ return fpcr; }
@@ -77,4 +78,6 @@ public:
 
 	void ReadInfoPage(const std::string& hexfilename);
 	void WriteInfoPage(const std::string& chipID);
+	
+	void ResetTarget();
 };
