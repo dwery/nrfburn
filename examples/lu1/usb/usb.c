@@ -24,6 +24,7 @@ uint8_t packetizer_data_size;
 uint16_t usbFrameCnt = 0;
 uint8_t usbHidIdle = 0;			// forever
 uint8_t usbLEDReport = 0;
+hid_report_t kbdReport;
 
 void usbInit(void)
 {
@@ -41,7 +42,7 @@ void usbInit(void)
 							// 1	sofie	Start of frame interrupt enable
 							// 0	sudavie	SETUP data valid interrupt enable
 	
-	// we only want get interrupts for EP0 IN/OUT
+	// we only want to get interrupts for EP0 IN/OUT
 	// the other interrupts are not needed (but EP1 IN is still used)
 	in_ien = 0x03;		// enable IN interrupts on EP0 and EP1
 	in_irq = 0x1f;		// reset IN interrupt flags
@@ -272,16 +273,46 @@ void usbHidRequest(void)
 
 	if (bRequest == USB_REQ_HID_SET_REPORT)
 	{
-		// we have to wait for the report data
+		// we have to wait for the 1 byte LED report
 		// which will come with the next EP0OUT interrupt
-	} else if (bRequest == USB_REQ_HID_SET_IDLE) {
+
+	} else if (bRequest == USB_REQ_HID_GET_REPORT) {
+
+		// this requests the HID report we defined with the HID report descriptor.
+		// this is usually sent over EP1 IN, but can be sent over EP0 too.
+
+		in0buf[0] = kbdReport.modifiers;
+		in0buf[1] = 0;
+		in0buf[2] = kbdReport.keys[0];
+		in0buf[3] = kbdReport.keys[1];
+		in0buf[4] = kbdReport.keys[2];
+		in0buf[5] = kbdReport.keys[3];
+		in0buf[6] = kbdReport.keys[4];
+		in0buf[7] = kbdReport.keys[5];
+
+		// send the data on it's way
+		in0bc = 8;
+		
+	} else if (bRequest == USB_REQ_HID_GET_IDLE) {
+
+		in0buf[0] = usbHidIdle;
+		in0bc = 0x01;
 	
+	} else if (bRequest == USB_REQ_HID_SET_IDLE) {
+
 		usbHidIdle = usbRequest.wValueMSB;
 		
 		// wValueLSB holds the reportID for which this rate applies,
 		// but we only have one, so this does not concern us
 
 		usbFrameCnt = 0;	// reset idle counter
+
+		// send an empty packet and ACK the request
+		in0bc = 0x00;
+		USB_EP0_HSNAK();
+		
+	} else {
+		USB_EP0_STALL();
 	}
 }
 
@@ -319,14 +350,12 @@ void usbRequestReceived(void)
 
 void usbRequestDataReceived(void)
 {
-	if (usbRequest.bRequest == USB_REQ_HID_SET_REPORT  /*&&  out0bc == 1*/)
-	{
-		usbLEDReport = out0buf[1];
-		out0bc = 0xff;		// the specs state 'any value'
-		USB_EP0_HSNAK();	// ACK the data packet
-	} else {
-		USB_EP0_STALL();
-	}
+	if (usbRequest.bRequest == USB_REQ_HID_SET_REPORT)
+		usbLEDReport = out0buf[0];
+		
+	// send an empty packet and ACK the request
+	in0bc = 0x00;
+	USB_EP0_HSNAK();
 }
 
 void usbPoll(void)
@@ -341,9 +370,11 @@ void usbPoll(void)
 	{
 	case INT_SUDAV:		// SETUP data packet
 		usbirq = 0x01;	// clear interrupt flag
+
 		usbRequestReceived();	// process setup data
 
-		P00 = P00 ? 0 : 1;
+		// arm the EP0 OUT in case we have data after the request
+		out0bc = 0x40;
 		
 		break;
 	case INT_SOF:		// SOF packet
@@ -363,26 +394,26 @@ void usbPoll(void)
 		usb_state = DEFAULT;	// reset internal states
 		usb_current_config = 0;
 		break;
+
 	case INT_EP0IN:
 		in_irq = 0x01;	// clear interrupt flag
 		// update USB RAM EP0 IN with new data
-		P01 = P01 ? 0 : 1;
 		packetizer_isr_ep0_in();
 		break;
+		
 	case INT_EP0OUT:
 		out_irq = 0x01;	// clear interrupt flag
 		
-		P02 = P02 ? 0 : 1;
-		
 		usbRequestDataReceived();
+		
+		// rearm the next EP0 OUT
+		out0bc = 0x40;
 		break;
 
 	case INT_EP1IN:
 		in_irq = 0x02;	// clear interrupt flag
 		// user code will have already filled IN1 buffer and set byte count
 		// USB controller clears busy flag when data is sent
-		
-		P03 = P03 ? 0 : 1;
 		
 		break;
 	case INT_EP1OUT:

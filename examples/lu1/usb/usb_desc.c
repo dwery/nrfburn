@@ -102,7 +102,7 @@ __code const usb_conf_desc_keyboard_t usb_conf_desc =
 		0x81,				// bEndpointAddress
 		USB_EP_TYPE_INT,	// bmAttributes
 		USB_EP1_SIZE,		// wMaxPacketSize
-		10,					// bInterval		10ms
+		1,					// bInterval		10ms
 	},
 };
 

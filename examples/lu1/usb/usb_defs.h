@@ -78,14 +78,6 @@ typedef enum
     SUSPENDED
 } usb_state_t;
 
-void usbInit(void);
-void usbPoll(void);
-
-bool usbHasIdleElapsed(void);
-
-// contains the last received LED report
-extern uint8_t usbLEDReport;
-
 // this is the HID report structure
 // this is what the data that we send to the host is comprised of
 typedef struct
@@ -105,6 +97,24 @@ typedef struct
 	uint8_t	keys[6];		// the keycode as defined in keycode.h
 	
 } hid_report_t;
+
+void usbInit(void);
+void usbPoll(void);
+
+bool usbHasIdleElapsed(void);
+
+// contains the last received LED report
+extern uint8_t usbLEDReport;	// bit	LED
+								// 0	CAPS
+								// 1	NUM
+								// 2	SCROLL
+
+#define CAPS_LOCK_MASK		0x01
+#define NUM_LOCK_MASK		0x02
+#define SCROLL_LOCK_MASK	0x04
+
+// the actual keyboard report
+extern hid_report_t kbdReport;
 
 // endpoint buffer sizes
 #define USB_EP0_SIZE	0x40
