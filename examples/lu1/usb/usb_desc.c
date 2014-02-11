@@ -1,23 +1,25 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "usb_desc.h"
+#include "usb_defs.h"
 
 __code const usb_dev_desc_t usb_dev_desc =
 {
 	sizeof(usb_dev_desc_t),
 	USB_DESC_DEVICE, 
-	0x0200,					// bcdUSB
-	0,						// bDeviceClass		- deferred to interface
-	0,						// bDeviceSubclass
-	0,						// bDeviceProtocol
-	MAX_PACKET_SIZE_EP0,	// bMaxPacketSize0
-	0x40aa,					// idVendor			- some unknown vendor id
-	0x9002,					// idProduct
-	0x0001,					// bcdDevice
-	1,						// iManufacturer
-	2,						// iProduct
-	3,						// iSerialNumber
-	1,						// bNumConfigurations
+	0x0200,			// bcdUSB
+	0,				// bDeviceClass		- deferred to interface
+	0,				// bDeviceSubclass
+	0,				// bDeviceProtocol
+	USB_EP0_SIZE,	// bMaxPacketSize0
+	0x40aa,			// idVendor			- some unknown vendor id
+	0x9002,			// idProduct
+	0x0001,			// bcdDevice
+	1,				// iManufacturer
+	2,				// iProduct
+	3,				// iSerialNumber
+	1,				// bNumConfigurations
 };
 
 // the default keyboard descriptor - compatible with keyboard boot protocol 
@@ -122,5 +124,5 @@ __code const uint16_t usb_string_desc_2[] =
 __code const uint16_t usb_string_desc_3[] =
 {
 	0x0300 | sizeof(usb_string_desc_3),		// string descriptor ID and length
-	'0','.','1','2','2','3','4','1'
+	'0','.','1','2','2','3','4','2'
 };

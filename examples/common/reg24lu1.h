@@ -160,8 +160,8 @@ __sbit __at 0xA8 EX0;
 __sbit __at 0xBF EXEN2;
 
 __sbit __at 0xBD WUIRQ;
-__sbit __at 0xBC USB;
-__sbit __at 0xBB USBWU;
+__sbit __at 0xBC USBIRQEN;
+__sbit __at 0xBB USBWUEN;
 __sbit __at 0xBA SPI;
 __sbit __at 0xB9 RF;
 __sbit __at 0xB8 RFSPI;
@@ -170,8 +170,8 @@ __sbit __at 0xB8 RFSPI;
 __sbit __at 0xC7 EXF2;
 __sbit __at 0xC6 TF2;
 __sbit __at 0xC5 WUF;
-__sbit __at 0xC4 USBF;
-__sbit __at 0xC3 USBWUF;
+__sbit __at 0xC4 USBIRQ;
+__sbit __at 0xC3 USBWU;
 __sbit __at 0xC2 SPIF;
 __sbit __at 0xC1 RFIRQ;
 __sbit __at 0xC0 RFSPIF;	// RFRDY

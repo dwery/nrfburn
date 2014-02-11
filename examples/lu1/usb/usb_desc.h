@@ -1,7 +1,5 @@
 #pragma once
 
-#include "usb_defs.h"
-
 typedef struct
 {
 	uint8_t		bmRequestType;
