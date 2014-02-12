@@ -394,6 +394,10 @@ void Programmer::WriteMainBlock(const std::string& hexfilename)
 
 void Programmer::VerifyMainBlock(const std::string& hexfilename)
 {
+	// is MainBlock readback disabled?
+	if (!CanReadMainBlock())
+		throw std::string("MainBlock readback is disabled by the target configuration.");
+
 	ProgressBar pb("Verifying");
 	
 	FlashMemory flash(flashSize);
@@ -415,29 +419,15 @@ void Programmer::VerifyMainBlock(const std::string& hexfilename)
 	// now compare
 	if (flash != verifyFlash)
 	{
-		/*flash.SaveHex("orig.hex");
-		verifyFlash.SaveHex("verif.hex");*/
+		//flash.SaveHex("orig.hex");
+		//verifyFlash.SaveHex("verif.hex");
 		throw std::string("MainBlock verification failed.");
 	}
 }
 
-void Programmer::WriteInfoPage(const std::string& chipID)
+void Programmer::WriteInfoPage(const uint8_t chipID[5])
 {
 	// first parse the chipID
-	uint8_t chip_id[5];
-	const char* pEnd = chipID.c_str();
-	int c;
-	for (c = 0; c < 5  &&  *pEnd; ++c)
-	{
-		long int res = strtol(pEnd, (char**) &pEnd, 16);
-		if (res < 0  ||  res > 0xff  ||  (*pEnd != '\0'  &&  *pEnd != '-'))
-			throw std::string("Incorrect ChipID format.");
-
-		chip_id[c] = uint8_t(res);
-
-		if (*pEnd)
-			pEnd++;
-	}
 
 	// do an erase all
 	// we must do this for the chip to allow an InfoPage erase
@@ -451,6 +441,7 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 	erasePage.length = sizeof erasePage;
 	erasePage.request = reqErasePageIP;
 	reqSetChecksum(erasePage);
+	
 	hidBurn.Write(erasePage);
 
 	pb.Refresh(0.3);
@@ -468,7 +459,7 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 	writeFlash.address = 0;
 	writeFlash.request = reqWriteInfoPage;
 	memset(writeFlash.data, 0xff, sizeof writeFlash.data);
-	memcpy(writeFlash.data + 0x0B, chip_id, sizeof chip_id);
+	memcpy(writeFlash.data + 0x0B, chipID, CHIP_ID_BYTES);
 	reqSetChecksum(writeFlash);
 	hidBurn.Write(writeFlash);
 
@@ -479,6 +470,29 @@ void Programmer::WriteInfoPage(const std::string& chipID)
 
 	if (resp.response != req2resp(reqWriteInfoPage))
 		throw std::string("Unexpected response from programmer while writing page in WriteInfoPage()");
+		
+	pb.Refresh(1);
+}
+
+void Programmer::DisableReadback(const int region)
+{
+	ProgressBar pb("Disabling");
+	
+	req_simple_t req;
+	req.length = sizeof req;
+	req.request = region == DISABLE_MB ? reqDisReadMainBlock : reqDisReadInfoPage;
+	reqSetChecksum(req);
+	
+	hidBurn.Write(req);
+	
+	pb.Refresh(0.5);
+
+	// validate
+	resp_simple_t resp;
+	ReadResponse1(resp);
+	
+	if (resp.response != req2resp(req.request))
+		throw std::string("Unexpected response from programmer while disabling readback DisableReadback()");
 		
 	pb.Refresh(1);
 }

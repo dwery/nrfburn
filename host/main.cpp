@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include <string>
@@ -10,29 +11,40 @@
 #include "flashmem.h"
 #include "utils.h"
 
-void PrintHelp()
+void PrintVer()
 {
 	printf("nrfburn v0.1  build %s %s\n", __DATE__, __TIME__);
-	puts("Usage: nrfburn [options]");	puts("Options:");	puts("  -f <flashsize>   Specify flash size in kilobytes. Only 16 or 32 are valid.");	puts("                   Default is 16kB.");	puts("  -w <filename>    Write contents of HEX file to nRF target MainBlock flash.");	puts("                   Automatically performs a chip erase before programming.");	puts("                   Does a verification pass after writing is complete.");	puts("  -v <filename>    Verify nRF target MainBlock with contents of HEX file.");	puts("  -r <filename>    Read nRF target MainBlock into HEX file.");	puts("  -p <filename>    Read nRF target InfoPage into HEX file.");	puts("  -e               Perform a chip erase. This erases only the MainBlock, ");	puts("                   and leaves the InfoPage intact.");	puts("  -i <chipID>      Erase the InfoPage and write the specified chip ID.");	puts("                   This also performs a chip erase.");	puts("                   chipID must be in the format xx-xx-xx-xx-xx");	puts("                   where x is a hex digit.");	puts("  -s               Reset the target nRF chip.");	puts("");
+}
+
+void PrintHelp()
+{
+	PrintVer();
+	puts("Usage: nrfburn [options]");	puts("Options:");	puts("  -f 16|32       Specify flash size in kilobytes. Only 16 or 32 are valid.");	puts("  -w <filename>  Write contents of HEX file to nRF target MainBlock flash.");	puts("                 Automatically performs a chip erase before programming.");	puts("                 Runs a verification pass after writing is complete.");	puts("  -v <filename>  Verify nRF target MainBlock with contents of HEX file.");	puts("  -r <filename>  Read nRF target MainBlock into HEX file.");	puts("  -p <filename>  Read nRF target InfoPage into HEX file.");	puts("  -e             Perform a chip erase. This erases only the MainBlock, ");	puts("                 and leaves the InfoPage intact.");	puts("  -i <chipID>    Erase the InfoPage and write the specified chip ID.");	puts("                 This also performs a chip erase.");	puts("                 chipID must be in the format xx-xx-xx-xx-xx");	puts("                 where x is a hex digit.");
+	puts("  -d mb|ip       Disable SPI reading of MainBlock or InfoPage.");
+	puts("  -s             Reset the target nRF chip.");	puts("");
 }
 
 struct Options
 {
 	std::string		WriteMBFrom;	// HEX -> MainBlock
 	std::string		ReadMBInto;		// MainBlock -> HEX
-	std::string		VerifyWith;		// HEX with MainBlock
+	std::string		VerifyMBWith;	// HEX with MainBlock
 	std::string		ReadIPInto;		// InfoPage -> HEX
-	std::string		ChipID;
+	uint8_t			ChipID[CHIP_ID_BYTES];
+	uint8_t			ChipID_len;
+	int				DisableReadback;
 	int				FlashSize;
 	bool			EraseAll;
 	bool			ResetTarget;
 
 	Options()
-		: FlashSize(16*1024), EraseAll(false), ResetTarget(false)
+		: ChipID_len(0), DisableReadback(DISABLE_NONE), FlashSize(0), EraseAll(false), ResetTarget(false)
 	{}
+
+	void ParseArgs(const int argc, const char* argv[]);
 };
 
-void ParseArgs(const int argc, const char* argv[], Options& opt)
+void Options::ParseArgs(const int argc, const char* argv[])
 {
 	int c = 1;
 	while (c < argc)
@@ -46,7 +58,7 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 			++c;
 
 			if (c < argc)
-				opt.WriteMBFrom = argv[c];
+				WriteMBFrom = argv[c];
 			else
 				throw std::string("Invalid HEX file name.");
 
@@ -55,7 +67,7 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 			++c;
 
 			if (c < argc)
-				opt.ReadMBInto = argv[c];
+				ReadMBInto = argv[c];
 			else
 				throw std::string("Invalid HEX file name.");
 
@@ -64,52 +76,88 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 			++c;
 
 			if (c < argc)
-				opt.ReadIPInto = argv[c];
+				ReadIPInto = argv[c];
 			else
 				throw std::string("Invalid HEX file name.");
 
 			break;
 		case 'e':
-			opt.EraseAll = true;
+			EraseAll = true;
 			break;
 		case 'f':
 			++c;
 
-			opt.FlashSize = 0;
+			FlashSize = 0;
 			
 			if (c < argc)
 			{
 				if (strcmp(argv[c], "16") == 0)
-					opt.FlashSize = 16*1024;
+					FlashSize = 16*1024;
 				else if (strcmp(argv[c], "32") == 0)
-					opt.FlashSize = 32*1024;
+					FlashSize = 32*1024;
 			}
 			
-			if (opt.FlashSize == 0)
-				throw std::string("Invalid flash size.");
+			if (FlashSize == 0)
+				throw std::string("Invalid flash size. Only 16 or 32 are valid.");
 			
 			break;
 		case 'i':
 			++c;
 
 			if (c < argc)
-				opt.ChipID = argv[c];
-			else
+			{
+				const char* pEnd = argv[c];
+				ChipID_len = 0;
+				while (*pEnd)
+				{
+					long int res = strtol(pEnd, (char**) &pEnd, 16);
+					if (res < 0  ||  res > 0xff  ||  (*pEnd != '\0'  &&  *pEnd != '-'))
+						throw std::string("Incorrect ChipID format.");
+
+					ChipID[ChipID_len++] = uint8_t(res);
+					
+					if (*pEnd)	// skip the -
+						pEnd++;
+				}
+				
+				if (ChipID_len != CHIP_ID_BYTES)
+					throw std::string("Incorrect ChipID length.");
+				
+			} else {
 				throw std::string("ChipID not specified.");
+			}
 
 			break;
 		case 'v':
 			++c;
 
 			if (c < argc)
-				opt.VerifyWith = argv[c];
+				VerifyMBWith = argv[c];
 			else
 				throw std::string("Invalid HEX file name.");
 				
 			break;
 			
+		case 'd':
+			++c;
+			
+			DisableReadback = DISABLE_NONE;
+			
+			if (c < argc)
+			{
+				if (strcmpi(argv[c], "mb") == 0)
+					DisableReadback = DISABLE_MB;
+				else if (strcmpi(argv[c], "ip") == 0)
+					DisableReadback = DISABLE_IP;
+			}
+
+			if (DisableReadback == DISABLE_NONE)
+				throw std::string("Invalid -d argument. Only mb or ip are allowed.");
+			
+			break;
+			
 		case 's':
-			opt.ResetTarget = true;
+			ResetTarget = true;
 			break;
 			
 		default:
@@ -119,6 +167,27 @@ void ParseArgs(const int argc, const char* argv[], Options& opt)
 
 		++c;
 	}
+	
+	//
+	// validate the args
+	//
+
+	if ((!WriteMBFrom.empty()  ||  !ReadMBInto.empty() ||  !VerifyMBWith.empty())  &&  FlashSize == 0)
+		throw std::string("Flash size not specified");
+	
+	int cnt = 0;
+	
+	cnt += WriteMBFrom.empty() ? 0 : 1;
+	cnt += ReadMBInto.empty() ? 0 : 1;
+	cnt += VerifyMBWith.empty() ? 0 : 1;
+	cnt += ReadIPInto.empty() ? 0 : 1;
+	cnt += ChipID_len ? 1 : 0;
+	cnt += EraseAll ? 1 : 0;
+	cnt += ResetTarget ? 1 : 0;
+	cnt += DisableReadback != DISABLE_NONE ? 1 : 0;
+	
+	if (cnt > 1)
+		throw std::string("Mutually exclusive options selected.");
 }
 
 std::string int2str(const int i)
@@ -179,15 +248,22 @@ void DoProg(const Options& opt)
 	} else if (!opt.ReadMBInto.empty()) {
 		prg.ReadMainBlock(opt.ReadMBInto);
 		printf("\nMainBlock contents saved into %s\n", opt.ReadMBInto.c_str());
-	} else if (!opt.VerifyWith.empty()) {
-		prg.VerifyMainBlock(opt.VerifyWith);
-		printf("\nMainBlock flash verified with %s\n", opt.VerifyWith.c_str());
+	} else if (!opt.VerifyMBWith.empty()) {
+		prg.VerifyMainBlock(opt.VerifyMBWith);
+		printf("\nMainBlock flash verified with %s\n", opt.VerifyMBWith.c_str());
 	} else if (!opt.ReadIPInto.empty()) {
 		prg.ReadInfoPage(opt.ReadIPInto);
 		printf("\nInfoPage contents saved into %s\n", opt.ReadIPInto.c_str());
-	} else if (!opt.ChipID.empty()) {
+	} else if (opt.DisableReadback != DISABLE_NONE) {
+		prg.DisableReadback(opt.DisableReadback);
+		printf("\nSPI readback of %s disabled.\n", opt.DisableReadback == DISABLE_MB ? "MainBlock" : "InfoPage");
+	} else if (opt.ChipID_len) {
 		prg.WriteInfoPage(opt.ChipID);
-		printf("ChipID %s written.\n", opt.ChipID.c_str());
+		printf("\nChipID %02x-%02x-%02x-%02x-%02x written.\n",	opt.ChipID[0],
+																opt.ChipID[1],
+																opt.ChipID[2],
+																opt.ChipID[3],
+																opt.ChipID[4]);
 	}
 }
 
@@ -201,7 +277,9 @@ int main(const int argc, const char* argv[])
 			return 1;
 		}
 
-		ParseArgs(argc, argv, opt);
+		PrintVer();
+		
+		opt.ParseArgs(argc, argv);
 
 		DoProg(opt);
 	} catch (std::string& e) {

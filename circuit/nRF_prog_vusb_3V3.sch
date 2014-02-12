@@ -126,13 +126,13 @@
 <library name="KileParts">
 <packages>
 <package name="NRF24LU1P_GENERIC">
-<pad name="SCK" x="-2" y="0" drill="0.8" shape="long" rot="R90"/>
-<pad name="PROG" x="-4" y="0" drill="0.8" shape="long" rot="R90"/>
-<pad name="MOSI" x="0" y="0" drill="0.8" shape="long" rot="R90"/>
-<pad name="MISO" x="2" y="0" drill="0.8" shape="long" rot="R90"/>
-<pad name="CSN" x="4" y="0" drill="0.8" shape="long" rot="R90"/>
-<pad name="VUSB" x="-6" y="0" drill="0.8" shape="long" rot="R90"/>
-<pad name="GND" x="6" y="0" drill="0.8" shape="long" rot="R90"/>
+<pad name="SCK" x="-2" y="0" drill="0.9" shape="long" rot="R90"/>
+<pad name="PROG" x="-4" y="0" drill="0.9" shape="long" rot="R90"/>
+<pad name="MOSI" x="0" y="0" drill="0.9" shape="long" rot="R90"/>
+<pad name="MISO" x="2" y="0" drill="0.9" shape="long" rot="R90"/>
+<pad name="CSN" x="4" y="0" drill="0.9" shape="long" rot="R90"/>
+<pad name="VUSB" x="-6" y="0" drill="0.9" shape="long" rot="R90"/>
+<pad name="GND" x="6" y="0" drill="0.9" shape="long" rot="R90"/>
 <text x="-7" y="2" size="1.27" layer="25">&gt;NAME</text>
 <text x="-5.375" y="-1.75" size="1.27" layer="51" rot="R90" align="bottom-right">VUSB</text>
 <text x="-3.375" y="-1.75" size="1.27" layer="51" rot="R90" align="bottom-right">PROG</text>
@@ -918,7 +918,7 @@
 <pad name="RESET" x="2.54" y="-1.27" drill="1" diameter="1.6764"/>
 <pad name="GND" x="2.54" y="1.27" drill="1" diameter="1.6764"/>
 <text x="-3.81" y="3.175" size="1.27" layer="25" ratio="10">&gt;NAME</text>
-<text x="-3.9688" y="-0.635" size="1.27" layer="25" ratio="10" rot="R180">1</text>
+<text x="-4.12755" y="-0.635" size="1.27" layer="25" ratio="10" rot="R180">1</text>
 </package>
 <package name="NRF24LU+_SPARKFUN_BREAKOUT">
 <description>Sparkfun nRF24LU1+ breakout board footprint</description>
@@ -1055,11 +1055,11 @@
 <pad name="TX" x="-1.27" y="0" drill="1" shape="long" rot="R90"/>
 <pad name="VCC" x="1.27" y="0" drill="1" shape="long" rot="R90"/>
 <pad name="GND" x="3.81" y="0" drill="1" shape="long" rot="R90"/>
-<text x="-5.08" y="2.286" size="1.27" layer="25" ratio="10">&gt;NAME</text>
-<text x="-3.175" y="-1.905" size="1.27" layer="21" rot="R90" align="bottom-right">RX</text>
-<text x="-0.635" y="-1.905" size="1.27" layer="21" rot="R90" align="bottom-right">TX</text>
-<text x="1.905" y="-1.905" size="1.27" layer="21" rot="R90" align="bottom-right">VCC</text>
-<text x="4.445" y="-1.905" size="1.27" layer="21" rot="R90" align="bottom-right">GND</text>
+<text x="-5.08" y="1.9685" size="1.016" layer="25" ratio="10">&gt;NAME</text>
+<text x="-3.33375" y="-1.74625" size="1.016" layer="21" rot="R90" align="bottom-right">RX</text>
+<text x="-0.79375" y="-1.74625" size="1.016" layer="21" rot="R90" align="bottom-right">TX</text>
+<text x="1.74625" y="-1.74625" size="1.016" layer="21" rot="R90" align="bottom-right">3.3V</text>
+<text x="4.28625" y="-1.74625" size="1.016" layer="21" rot="R90" align="bottom-right">GND</text>
 <wire x1="-1.905" y1="1.27" x2="-0.635" y2="1.27" width="0.1524" layer="21"/>
 </package>
 <package name="TACTILE_SWITCH_SMD">
@@ -19481,8 +19481,8 @@ Source: www.kingbright.com</description>
 <part name="P+5" library="SparkFun" deviceset="3.3V" device=""/>
 <part name="TGT_PWR" library="KileParts" deviceset="JP2E" device=""/>
 <part name="P+4" library="SparkFun" deviceset="3.3V" device=""/>
-<part name="LED4" library="led" deviceset="LED" device="CHIPLED_0805"/>
-<part name="LED5" library="led" deviceset="LED" device="CHIPLED_0805"/>
+<part name="DBG2" library="led" deviceset="LED" device="CHIPLED_0805"/>
+<part name="DBG1" library="led" deviceset="LED" device="CHIPLED_0805"/>
 <part name="R9" library="rcl" deviceset="R-EU_" device="M0805" value="1K"/>
 <part name="R10" library="rcl" deviceset="R-EU_" device="M0805" value="1K"/>
 <part name="U$1" library="SparkFun" deviceset="OSHW-LOGO" device="M" value="OSHW-LOGOM"/>
@@ -19537,8 +19537,8 @@ Source: www.kingbright.com</description>
 <instance part="P+5" gate="G$1" x="86.36" y="15.24"/>
 <instance part="TGT_PWR" gate="1" x="137.16" y="63.5"/>
 <instance part="P+4" gate="G$1" x="147.32" y="60.96"/>
-<instance part="LED4" gate="G$1" x="114.3" y="20.32" rot="R180"/>
-<instance part="LED5" gate="G$1" x="109.22" y="20.32" rot="R180"/>
+<instance part="DBG2" gate="G$1" x="114.3" y="20.32" rot="R180"/>
+<instance part="DBG1" gate="G$1" x="109.22" y="20.32" rot="R180"/>
 <instance part="R9" gate="G$1" x="109.22" y="33.02" rot="R270"/>
 <instance part="R10" gate="G$1" x="114.3" y="33.02" rot="R270"/>
 <instance part="U$1" gate="G$1" x="-12.7" y="48.26"/>
@@ -20021,28 +20021,28 @@ Source: www.kingbright.com</description>
 <net name="N$1" class="0">
 <segment>
 <pinref part="LU1+_SPARKFUN" gate="G$1" pin="P0.5"/>
-<pinref part="LED4" gate="G$1" pin="A"/>
+<pinref part="DBG2" gate="G$1" pin="A"/>
 <wire x1="114.3" y1="15.24" x2="114.3" y2="17.78" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$2" class="0">
 <segment>
 <pinref part="LU1+_SPARKFUN" gate="G$1" pin="P0.4"/>
-<pinref part="LED5" gate="G$1" pin="A"/>
+<pinref part="DBG1" gate="G$1" pin="A"/>
 <wire x1="114.3" y1="12.7" x2="109.22" y2="12.7" width="0.1524" layer="91"/>
 <wire x1="109.22" y1="12.7" x2="109.22" y2="17.78" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$3" class="0">
 <segment>
-<pinref part="LED4" gate="G$1" pin="C"/>
+<pinref part="DBG2" gate="G$1" pin="C"/>
 <pinref part="R10" gate="G$1" pin="2"/>
 <wire x1="114.3" y1="27.94" x2="114.3" y2="25.4" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$4" class="0">
 <segment>
-<pinref part="LED5" gate="G$1" pin="C"/>
+<pinref part="DBG1" gate="G$1" pin="C"/>
 <pinref part="R9" gate="G$1" pin="2"/>
 <wire x1="109.22" y1="25.4" x2="109.22" y2="27.94" width="0.1524" layer="91"/>
 </segment>

@@ -8,9 +8,11 @@
 # define __AT(addr)
 #endif
 
+/*
+// we don't use these in our project, 
+
 #define USB_EP_DEFAULT_BUF_SIZE		0x10
 
-/*
 USB_REGS_EXTERN volatile __xdata __AT (0xC440) uint8_t out5buf[USB_EP_DEFAULT_BUF_SIZE];
 USB_REGS_EXTERN volatile __xdata __AT (0xC480) uint8_t in5buf[USB_EP_DEFAULT_BUF_SIZE];
 USB_REGS_EXTERN volatile __xdata __AT (0xC4C0) uint8_t out4buf[USB_EP_DEFAULT_BUF_SIZE];

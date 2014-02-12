@@ -4,6 +4,13 @@
 #include "flashmem.h"
 #include "../firmware/prg_common.h"
 
+
+#define CHIP_ID_BYTES	5
+
+#define DISABLE_NONE	0
+#define DISABLE_MB		1
+#define DISABLE_IP		2
+
 class Programmer
 {
 private:
@@ -77,7 +84,9 @@ public:
 	void VerifyMainBlock(const std::string& hexfilename);
 
 	void ReadInfoPage(const std::string& hexfilename);
-	void WriteInfoPage(const std::string& chipID);
+	void WriteInfoPage(const uint8_t chipID[CHIP_ID_BYTES]);
+	
+	void DisableReadback(const int region);
 	
 	void ResetTarget();
 };
