@@ -22,6 +22,9 @@ typedef struct
 
 __code const char2keycode_t char2keycode[0x80] = {
 	{KC_NO, 0},		// 0x00
+	// the next two are special codes for selecting all text in an editor
+	// and selecting the current line. this is used for deleting the selected
+	// text by 'typing' over it.
 	{KC_A, MOD_LCTRL},		// 0x01 ctrl-a
 	{KC_HOME, MOD_LSHIFT},	// 0x02 shift-home
 	{KC_NO, 0},		// 0x03
