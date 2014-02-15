@@ -184,45 +184,38 @@ void main()
 	{
 		usbPoll();	// handles USB interrupts
 
-		// restart the message if scroll lock is off
-		if ((usbLEDReport & SCROLL_LOCK_MASK) == 0)
-			pMsg = msg;
-		
 		// make a keyboard report
-		if (!reportPending)
+		if (!reportPending  &&  (usbLEDReport & SCROLL_LOCK_MASK) != 0  &&  pMsg)
 		{
-			// reset the report
-			memset(&kbdReport, 0, sizeof kbdReport);
-		
-			if ((usbLEDReport & SCROLL_LOCK_MASK) != 0  &&  *pMsg != 0)
+			char c = *pMsg;
+
+			// get the next char from the stored text message
+			uint8_t new_keycode = get_keycode_for_char(c);
+
+			memset(&kbdReport, 0, sizeof kbdReport);	// reset the report
+			
+			// if the keycode is different than the previous
+			// otherwise just send an empty report to simulate key went up
+			if (new_keycode != prev_keycode  ||  new_keycode == KC_NO)
 			{
-				char c = *pMsg;
+				kbdReport.keys[0] = new_keycode;
+				kbdReport.modifiers = get_modifiers_for_char(c);
 
-				// get the next char from the stored text message
-				uint8_t new_keycode = get_keycode_for_char(c);
-
-				// if the keycode is different than the previous
-				// otherwise just send an empty report to simulate key went up
-				if (new_keycode != prev_keycode  ||  new_keycode == KC_NO)
-				{
-					kbdReport.keys[0] = new_keycode;
-					kbdReport.modifiers = get_modifiers_for_char(c);
-
+				if (*pMsg == '\0')
+					pMsg = NULL;
+				else
 					++pMsg;
+			} else {
+				new_keycode = KC_NO;
+			}
 
-					/*if (*pMsg == '\0')
-						pMsg = msg;*/
-
-				} else {
-					new_keycode = KC_NO;
-				}
-				
-				prev_keycode = new_keycode;		// remember for later
-			}			
+			prev_keycode = new_keycode;		// remember for later
 
 			reportPending = true;
+		} else if ((usbLEDReport & SCROLL_LOCK_MASK) == 0) {
+			pMsg = msg;		// rearm for next scroll lock
 		}
-		
+
 		// send the report if the endpoint is not busy
 		if ((in1cs & 0x02) == 0   &&   (reportPending  ||  usbHasIdleElapsed()))
 		{
