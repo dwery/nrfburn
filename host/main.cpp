@@ -243,7 +243,7 @@ void DoProg(const Options& opt)
 		prg.EraseAll();
 	} else if (!opt.WriteMBFrom.empty()) {
 		prg.WriteMainBlock(opt.WriteMBFrom);
-		prg.VerifyMainBlock(opt.WriteMBFrom);
+		prg.VerifyMainBlock(opt.WriteMBFrom, true);
 		printf("\nMainBlock flash written from %s\n", opt.WriteMBFrom.c_str());
 	} else if (!opt.ReadMBInto.empty()) {
 		prg.ReadMainBlock(opt.ReadMBInto);

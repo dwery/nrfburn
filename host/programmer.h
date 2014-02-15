@@ -81,7 +81,7 @@ public:
 
 	void ReadMainBlock(const std::string& hexfilename);
 	void WriteMainBlock(const std::string& hexfilename);
-	void VerifyMainBlock(const std::string& hexfilename);
+	void VerifyMainBlock(const std::string& hexfilename, const bool ignoreCheck = false);
 
 	void ReadInfoPage(const std::string& hexfilename);
 	void WriteInfoPage(const uint8_t chipID[CHIP_ID_BYTES]);

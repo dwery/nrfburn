@@ -392,10 +392,10 @@ void Programmer::WriteMainBlock(const std::string& hexfilename)
 	}
 }
 
-void Programmer::VerifyMainBlock(const std::string& hexfilename)
+void Programmer::VerifyMainBlock(const std::string& hexfilename, const bool ignoreCheck)
 {
 	// is MainBlock readback disabled?
-	if (!CanReadMainBlock())
+	if (!ignoreCheck  &&  !CanReadMainBlock())
 		throw std::string("MainBlock readback is disabled by the target configuration.");
 
 	ProgressBar pb("Verifying");
