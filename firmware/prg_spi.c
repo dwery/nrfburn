@@ -287,6 +287,7 @@ bool ProgSpiWaitForRDYN(uint8_t timeout_ms)
 
 		if (timeout_ms)
 			_delay_ms(1);
+
 	} while (timeout_ms--);
 	
 	return false;
