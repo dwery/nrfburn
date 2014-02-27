@@ -116,7 +116,7 @@ void Options::ParseArgs(const int argc, const char* argv[])
 
 					ChipID[ChipID_len++] = uint8_t(res);
 					
-					if (*pEnd)	// skip the -
+					if (*pEnd)	// skip the dash
 						pEnd++;
 				}
 				
@@ -145,9 +145,9 @@ void Options::ParseArgs(const int argc, const char* argv[])
 			
 			if (c < argc)
 			{
-				if (strcmpi(argv[c], "mb") == 0)
+				if (strcasecmp(argv[c], "mb") == 0)
 					DisableReadback = DISABLE_MB;
-				else if (strcmpi(argv[c], "ip") == 0)
+				else if (strcasecmp(argv[c], "ip") == 0)
 					DisableReadback = DISABLE_IP;
 			}
 
