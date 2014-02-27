@@ -1,34 +1,18 @@
 #include <stdint.h>
 
 #include "reg24lu1.h"
+#include "utils.h"
 
-void delay_us(uint16_t us)
-{
-	do {
-		__asm
-		nop
-		nop
-		nop
-		nop
-		nop
-		__endasm;
-	} while (--us);
-}
+// this example reads the ChipID from the InfoPage of an nRF24LU1+
 
-void delay_ms(uint16_t ms)
-{
-	do {
-		delay_us(1000);
-	} while (--ms);
-}
-
-__xdata volatile uint8_t* pChipID = (__xdata void*) 0x000B;
+__xdata uint8_t* pChipID = (__xdata void*) 0x000B;
 
 /*
-my CHIPID (large)    = 0x2ADF32E602
-my CHIPID (small)    = 0x189E9772D3
-my CHIPID (SparkFun) = 0x500737F4C6
+nRF24LU1+ InfoPage bytes:
 
+0x00 - 0x0A reserved
+0x0B - 0x0F ChipID
+0x10 - 0x1F reserved
 0x20 = 0xff number of unprotected pages
 0x21 = 0xb0 enable flash data memory (0xff -> no data memory)
 0x22 = 0x00 readback blocking byte for InfoPage

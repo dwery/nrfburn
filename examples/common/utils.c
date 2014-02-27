@@ -1,6 +1,8 @@
+#include <stdint.h>
+
 #include "utils.h"
 
-void delay_us(uint16_t us)
+void delay_us(__idata uint16_t us)
 {
 	do {
 		__asm
@@ -13,7 +15,7 @@ void delay_us(uint16_t us)
 	} while (--us);
 }
 
-void delay_ms(uint16_t ms)
+void delay_ms(__idata uint16_t ms)
 {
 	do {
 		delay_us(1000);

@@ -10,10 +10,8 @@
 // ISR for interrupt on P0.3
 void EXT_INT0_ISR(void) __interrupt 0
 {
-	if (P00 == 0)
-		P00 = 1;
-	else
-		P00 = 0;
+	// toggle P0.0
+	P00 = P00 ? 0 : 1;
 }
 
 void main()
