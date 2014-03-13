@@ -12,7 +12,7 @@
 #define BAUD_19K2    998  // = Round(1024 - (2*16e6)/(64*19200))
 #define BAUD_9K6     972  // = Round(1024 - (2*16e6)/(64*9600))
 
-void uart_init(void)
+void uartInit(void)
 {
 	uint16_t temp;
 
@@ -21,14 +21,19 @@ void uart_init(void)
 	SM0 = 0;			// Mode 1..
 	SM1 = 1;			// ..8 bit variable baud rate
 	PCON |= 0x80; 		// SMOD = 1
-	ADCON |= 0x80;		// Select internal baud rate generator
+	WDCON |= 0x80;		// Select internal baud rate generator
 	temp = BAUD_57K6;
 	//temp = BAUD_38K4;
-	//temp = BAUD_19K2;
 	//temp = BAUD_9K6;
+	//temp = BAUD_19K2;
 	S0RELL = (uint8_t)temp;
 	S0RELH = (uint8_t)(temp >> 8);
-	TI0 = 1;
+
+	P0ALT |= 0x06;		// Select alternate functions on P01 and P02
+	P0EXP &= 0xf0;		// Select RxD on P01 and TxD on P02
+	P0DIR |= 0x02;		// P01 (RxD) is input
+
+	TI0 = 1;		
 	//ES0 = 1;			// Enable UART0 interrupt
 }
 
