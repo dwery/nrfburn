@@ -22,7 +22,7 @@
 
 /* ------------------------------------------------------------------------ */
 
-#define bootloaderCondition()		(PIND & _BV(5))		// true if PROG is pulled high
+#define bootloaderCondition()		(PIN(PROG_PORT) & _BV(PROG_BIT))		// true if PROG is pulled high
 
 #define addr_t	uint16_t
 
