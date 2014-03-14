@@ -11,9 +11,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/wdt.h>
 #include <avr/boot.h>
-#include <string.h>
 #include <util/delay.h>
 
 #include "usbdrv.h"
@@ -24,8 +22,8 @@
 
 #define addr_t	uint16_t
 
-addr_t	currentAddress; // in bytes
-uint8_t	offset;         // data already processed in current transfer
+addr_t	currentAddress;		// in bytes
+uint8_t	offset;				// data already processed in current transfer
 uint8_t	exitMainloop;
 
 const PROGMEM char usbHidReportDescriptor[33] =
@@ -49,7 +47,7 @@ const PROGMEM char usbHidReportDescriptor[33] =
 	0xc0					// END_COLLECTION
 };
 
-void (*nullVector)(void) __attribute__((__noreturn__));
+void (*nullVector)(void) __attribute__((__noreturn__)) = 0;
 
 void leaveBootloader(void)
 {
@@ -67,8 +65,8 @@ void leaveBootloader(void)
 	boot_rww_enable();
 	USB_INTR_ENABLE = 0;
 	USB_INTR_CFG = 0;		// also reset config bits
-	MCUCR = _BV(IVCE);		// enable change of interrupt vectors
-	MCUCR = (0 << IVSEL);	// move interrupts to application flash section
+	MCUCR = _B1(IVCE);		// enable change of interrupt vectors
+	MCUCR = _B0(IVSEL);		// move interrupts to application flash section
 	
 	// We must go through a global function pointer variable instead of writing
 	// ((void (*)(void))0)();
@@ -174,7 +172,7 @@ void initForUsbConnectivity(void)
 {
 	usbInit();
 
-	// enforce USB re-enumerate:
+	// enforce USB re-enumerate
 	usbDeviceDisconnect();	// do this while interrupts are disabled
 	_delay_ms(260);			// fake USB disconnect for > 250 ms
 	usbDeviceConnect();
@@ -184,7 +182,7 @@ void initForUsbConnectivity(void)
 
 inline uint8_t bootloaderCondition(void)
 {
-	return PIN(PROG_PORT) & _BV(PROG_BIT);
+	return PIN(PROG_PORT) & _B1(PROG_BIT);
 }
 
 int main(void)
@@ -194,13 +192,13 @@ int main(void)
 	// jump to application if jumper is set
 	if (bootloaderCondition())
 	{
-		DDRC = _BV(LED_PROG_BIT) | _BV(LED1_BIT) | _BV(LED2_BIT);
+		DDRC = _B1(LED_PROG_BIT) | _B1(LED1_BIT) | _B1(LED2_BIT);
 		//SetBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
 		//SetBit(DDR(LED1_PORT), LED1_BIT);
 		//SetBit(DDR(LED2_PORT), LED2_BIT);
 
-		MCUCR = _BV(IVCE);	// enable change of interrupt vectors
-		MCUCR = _BV(IVSEL);	// move interrupts to boot flash section 
+		MCUCR = _B1(IVCE);	// enable change of interrupt vectors
+		MCUCR = _B1(IVSEL);	// move interrupts to boot flash section 
 
 		initForUsbConnectivity();
 
@@ -213,21 +211,21 @@ int main(void)
 			// do the LEDs
 			if (--cntloop == 0)
 			{
-				if (led_cnt == 0)
+				if ((led_cnt & 1) == 0)
 				{
-					PORT(LED1_PORT) = _BV(LED1_BIT);
+					PORT(LED1_PORT) = _B1(LED1_BIT);
 					//ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
 					//SetBit(PORT(LED1_PORT), LED1_BIT);
 				} else if (led_cnt == 1) {
-					PORT(LED2_PORT) = _BV(LED2_BIT);
+					PORT(LED2_PORT) = _B1(LED2_BIT);
 					//ClrBit(PORT(LED1_PORT), LED1_BIT);
 					//SetBit(PORT(LED2_PORT), LED2_BIT);
-				} else if (led_cnt == 2) {
-					PORT(LED1_PORT) = _BV(LED1_BIT);
+				/*} else if (led_cnt == 2) {
+					PORT(LED1_PORT) = _B1(LED1_BIT);
 					//ClrBit(PORT(LED2_PORT), LED2_BIT);
-					//SetBit(PORT(LED1_PORT), LED1_BIT);
+					//SetBit(PORT(LED1_PORT), LED1_BIT);*/
 				} else if (led_cnt == 3) {
-					PORT(LED_PROG_PORT) = _BV(LED_PROG_BIT);
+					PORT(LED_PROG_PORT) = _B1(LED_PROG_BIT);
 					//ClrBit(PORT(LED1_PORT), LED1_BIT);
 					//SetBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
 				}
