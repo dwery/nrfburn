@@ -22,13 +22,11 @@
 
 /* ------------------------------------------------------------------------ */
 
-#define bootloaderCondition()		(PIN(PROG_PORT) & _BV(PROG_BIT))		// true if PROG is pulled high
-
 #define addr_t	uint16_t
 
-static addr_t	currentAddress; // in bytes
-static uchar	offset;         // data already processed in current transfer
-static uchar	exitMainloop;
+addr_t	currentAddress; // in bytes
+uint8_t	offset;         // data already processed in current transfer
+uint8_t	exitMainloop;
 
 const PROGMEM char usbHidReportDescriptor[33] =
 {
@@ -51,23 +49,27 @@ const PROGMEM char usbHidReportDescriptor[33] =
 	0xc0					// END_COLLECTION
 };
 
-static void (*nullVector)(void) __attribute__((__noreturn__));
+void (*nullVector)(void) __attribute__((__noreturn__));
 
-static void leaveBootloader(void)
+void leaveBootloader(void)
 {
-	ClrBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
-	ClrBit(DDR(LED1_PORT), LED1_BIT);
-	ClrBit(DDR(LED2_PORT), LED2_BIT);
-	ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
-	ClrBit(PORT(LED1_PORT), LED1_BIT);
-	ClrBit(PORT(LED2_PORT), LED2_BIT);
+	DDR(LED_PROG_PORT) = 0;
+	//ClrBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
+	//ClrBit(DDR(LED1_PORT), LED1_BIT);
+	//ClrBit(DDR(LED2_PORT), LED2_BIT);
+
+	PORT(LED_PROG_PORT) = 0;
+	//ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
+	//ClrBit(PORT(LED1_PORT), LED1_BIT);
+	//ClrBit(PORT(LED2_PORT), LED2_BIT);
 
 	cli();
 	boot_rww_enable();
 	USB_INTR_ENABLE = 0;
 	USB_INTR_CFG = 0;		// also reset config bits
-	MCUCR = (1 << IVCE);	// enable change of interrupt vectors
+	MCUCR = _BV(IVCE);		// enable change of interrupt vectors
 	MCUCR = (0 << IVSEL);	// move interrupts to application flash section
+	
 	// We must go through a global function pointer variable instead of writing
 	// ((void (*)(void))0)();
 	// because the compiler optimizes a constant 0 to "rcall 0" which is not
@@ -180,18 +182,22 @@ void initForUsbConnectivity(void)
 	sei();
 }
 
-int __attribute__((noreturn)) main(void)
+inline uint8_t bootloaderCondition(void)
 {
-	_delay_ms(150);
+	return PIN(PROG_PORT) & _BV(PROG_BIT);
+}
+
+int main(void)
+{
+	_delay_ms(50);
 	
 	// jump to application if jumper is set
 	if (bootloaderCondition())
 	{
-		SetBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
-		SetBit(DDR(LED1_PORT), LED1_BIT);
-		SetBit(DDR(LED2_PORT), LED2_BIT);
-
-		uint8_t i = 0, j = 0;
+		DDRC = _BV(LED_PROG_BIT) | _BV(LED1_BIT) | _BV(LED2_BIT);
+		//SetBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
+		//SetBit(DDR(LED1_PORT), LED1_BIT);
+		//SetBit(DDR(LED2_PORT), LED2_BIT);
 
 		MCUCR = _BV(IVCE);	// enable change of interrupt vectors
 		MCUCR = _BV(IVSEL);	// move interrupts to boot flash section 
@@ -200,39 +206,48 @@ int __attribute__((noreturn)) main(void)
 
 		// main event loop
 		uint16_t cntloop = 0;
-		uchar led_cnt = 0;
+		uint8_t i = 0, j = 0, led_cnt = 0;
 		do {
+			usbPoll();
+
+			// do the LEDs
 			if (--cntloop == 0)
 			{
 				if (led_cnt == 0)
 				{
-					ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
-					SetBit(PORT(LED1_PORT), LED1_BIT);
+					PORT(LED1_PORT) = _BV(LED1_BIT);
+					//ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
+					//SetBit(PORT(LED1_PORT), LED1_BIT);
 				} else if (led_cnt == 1) {
-					ClrBit(PORT(LED1_PORT), LED1_BIT);
-					SetBit(PORT(LED2_PORT), LED2_BIT);
+					PORT(LED2_PORT) = _BV(LED2_BIT);
+					//ClrBit(PORT(LED1_PORT), LED1_BIT);
+					//SetBit(PORT(LED2_PORT), LED2_BIT);
 				} else if (led_cnt == 2) {
-					ClrBit(PORT(LED2_PORT), LED2_BIT);
-					SetBit(PORT(LED1_PORT), LED1_BIT);
+					PORT(LED1_PORT) = _BV(LED1_BIT);
+					//ClrBit(PORT(LED2_PORT), LED2_BIT);
+					//SetBit(PORT(LED1_PORT), LED1_BIT);
 				} else if (led_cnt == 3) {
-					ClrBit(PORT(LED1_PORT), LED1_BIT);
-					SetBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
+					PORT(LED_PROG_PORT) = _BV(LED_PROG_BIT);
+					//ClrBit(PORT(LED1_PORT), LED1_BIT);
+					//SetBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
 				}
 
 				led_cnt = (led_cnt + 1) & 3;
 			}
-
-			usbPoll();
+			
 			if (exitMainloop)
 			{
-				if(--i == 0)
+				if (--i == 0)
 				{
-					if(--j == 0)
+					if (--j == 0)
 						break;
 				}
 			}
+			
 		} while (bootloaderCondition());
 	}
 
 	leaveBootloader();
+	
+	return 0;
 }
