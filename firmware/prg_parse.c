@@ -110,10 +110,10 @@ void progParseSetRxByte(uint8_t byte)
 
 				if (sum == 0)
 				{
+					ClrBit(PORT(LED_ERR_PORT), LED_ERR_BIT);
 					reqComplete = true;
 				} else {	// checksum error
-					SetBit(PORT(LED2_PORT), LED2_BIT);
-					SetBit(PORT(LED1_PORT), LED1_BIT);
+					SetBit(PORT(LED_ERR_PORT), LED_ERR_BIT);
 				
 					respBuffer.error.length = sizeof respBuffer.error;
 					respBuffer.error.response = respError;

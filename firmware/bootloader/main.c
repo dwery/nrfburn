@@ -192,10 +192,8 @@ int main(void)
 	// jump to application if jumper is set
 	if (bootloaderCondition())
 	{
-		DDRC = _B1(LED_PROG_BIT) | _B1(LED1_BIT) | _B1(LED2_BIT);
-		//SetBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
-		//SetBit(DDR(LED1_PORT), LED1_BIT);
-		//SetBit(DDR(LED2_PORT), LED2_BIT);
+		// LEDs are output
+		DDR(LED_USB_PORT) = _B1(LED_USB_BIT) | _B1(LED_PROG_BIT) | _B1(LED_ERR_BIT);
 
 		MCUCR = _B1(IVCE);	// enable change of interrupt vectors
 		MCUCR = _B1(IVSEL);	// move interrupts to boot flash section 
@@ -212,23 +210,11 @@ int main(void)
 			if (--cntloop == 0)
 			{
 				if ((led_cnt & 1) == 0)
-				{
-					PORT(LED1_PORT) = _B1(LED1_BIT);
-					//ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
-					//SetBit(PORT(LED1_PORT), LED1_BIT);
-				} else if (led_cnt == 1) {
-					PORT(LED2_PORT) = _B1(LED2_BIT);
-					//ClrBit(PORT(LED1_PORT), LED1_BIT);
-					//SetBit(PORT(LED2_PORT), LED2_BIT);
-				/*} else if (led_cnt == 2) {
-					PORT(LED1_PORT) = _B1(LED1_BIT);
-					//ClrBit(PORT(LED2_PORT), LED2_BIT);
-					//SetBit(PORT(LED1_PORT), LED1_BIT);*/
-				} else if (led_cnt == 3) {
 					PORT(LED_PROG_PORT) = _B1(LED_PROG_BIT);
-					//ClrBit(PORT(LED1_PORT), LED1_BIT);
-					//SetBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
-				}
+				else if (led_cnt == 1)
+					PORT(LED_USB_PORT) = _B1(LED_USB_BIT);
+				else if (led_cnt == 3)
+					PORT(LED_ERR_PORT) = _B1(LED_ERR_BIT);
 
 				led_cnt = (led_cnt + 1) & 3;
 			}

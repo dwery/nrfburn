@@ -44,7 +44,7 @@ uint8_t reportId;			// the HID report ID we're working on
 bool isFirstPacket;			// if this is true it means the first byte of the packet is the reportID
 
 // usbFunctionRead() is called when the host requests a chunk of data from the device.
-uchar usbFunctionRead(uchar* data, uchar len)
+uint8_t usbFunctionRead(uint8_t* data, uint8_t len)
 {
 	// first clear the buffer
 	memset(data, 0, len);
@@ -64,7 +64,7 @@ uchar usbFunctionRead(uchar* data, uchar len)
 
 		int c;
 		for (c = 0; c < bytes2send; ++c)
-			data[c] = (uchar) progParseGetTxByte();
+			data[c] = (uint8_t) progParseGetTxByte();
 
 	} else {
 		// set the report ID
@@ -78,7 +78,7 @@ uchar usbFunctionRead(uchar* data, uchar len)
 }
 
 // usbFunctionWrite() is called when the host sends a chunk of data to the device.
-uchar usbFunctionWrite(uchar* data, uchar len)
+uint8_t usbFunctionWrite(uint8_t* data, uint8_t len)
 {
 	bytesRemaining -= len;
 
@@ -99,7 +99,7 @@ uchar usbFunctionWrite(uchar* data, uchar len)
 	return bytesRemaining == 0;		// return 1 if this was the last chunk
 }
 
-usbMsgLen_t usbFunctionSetup(uchar data[8])
+usbMsgLen_t usbFunctionSetup(uint8_t data[8])
 {
 	usbRequest_t* rq = (void*) data;
 

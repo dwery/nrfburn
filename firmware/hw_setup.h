@@ -1,14 +1,14 @@
 #pragma once
 
 // LEDs
+#define LED_ERR_PORT	C
+#define LED_ERR_BIT		1
+
 #define LED_PROG_PORT	C
-#define LED_PROG_BIT	1
+#define LED_PROG_BIT	2
 
-#define LED1_PORT		C
-#define LED1_BIT		2
-
-#define LED2_PORT		C
-#define LED2_BIT		3
+#define LED_USB_PORT	C
+#define LED_USB_BIT		3
 
 
 // the nRF24LU1+ programming interface

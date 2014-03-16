@@ -16,14 +16,14 @@
 void init_hw(void)
 {
 	// the LEDs
-	SetBit(DDR(LED1_PORT), LED1_BIT);
-	ClrBit(PORT(LED1_PORT), LED1_BIT);
-
-	SetBit(DDR(LED2_PORT), LED2_BIT);
-	ClrBit(PORT(LED2_PORT), LED2_BIT);
+	SetBit(DDR(LED_ERR_PORT), LED_ERR_BIT);
+	ClrBit(PORT(LED_ERR_PORT), LED_ERR_BIT);
 
 	SetBit(DDR(LED_PROG_PORT), LED_PROG_BIT);
 	ClrBit(PORT(LED_PROG_PORT), LED_PROG_BIT);
+
+	SetBit(DDR(LED_USB_PORT), LED_USB_BIT);
+	ClrBit(PORT(LED_USB_PORT), LED_USB_BIT);
 
 	uartInit();			// serial port (debugging only)
 	
@@ -49,6 +49,12 @@ int main(void)
 	{
 		// poll the V-USB library
 		usbPoll();
+
+		// turn the USB LED on if we are configured
+		if (usbConfiguration != 0)
+			SetBit(PORT(LED_USB_PORT), LED_USB_BIT);
+		else
+			ClrBit(PORT(LED_USB_PORT), LED_USB_BIT);
 		
 		// handle the requests, and create responses
 		progParsePoll();

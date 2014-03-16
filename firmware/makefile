@@ -24,7 +24,7 @@ $(TARGET).hex: $(OBJECTS)
 	avr-objcopy -j .text -j .data -O ihex $(TARGET).elf $(TARGET).hex
 	avr-size -C --mcu=$(DEVICE) $(TARGET).elf
 
-flash: $(TARGET).hex
+flash: all $(TARGET).hex
 	$(AVRDUDE) -U flash:w:$(TARGET).hex:i
 
 clean:
