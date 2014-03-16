@@ -39,6 +39,8 @@ public:
 	{
 		return flashSize;
 	}
+
+	int GetFlashLastByte() const;
 	
 	// compare flashes - used for verification
 	const bool operator == (const FlashMemory& lhs) const;

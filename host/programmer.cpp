@@ -370,6 +370,8 @@ void Programmer::WriteMainBlock(const std::string& hexfilename)
 	FlashMemory flash(flashSize);
 	
 	flash.LoadHex(hexfilename);		// read the HEX file
+	
+	printf("Loaded %i bytes from HEX file %s\n\n", flash.GetFlashLastByte(), hexfilename.c_str());
 
 	EraseAll();			// erase the chip's MainBlock
 

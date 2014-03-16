@@ -55,6 +55,9 @@ void DoBootload(const std::string& HexForBootloader)
 	printf("Loading firmware from HEX file %s\n", HexForBootloader.c_str());
 	FlashMemory mem(6 * 1024);
 	mem.LoadHex(HexForBootloader);
+
+	const int lastFlashByte = mem.GetFlashLastByte();
+	printf("Firmware size %i bytes\n\n", lastFlashByte);
 	
 	DeviceInfo devInfo;
 	bootloader.GetReport((uint8_t*) &devInfo, sizeof devInfo, 1);
@@ -62,21 +65,15 @@ void DoBootload(const std::string& HexForBootloader)
 	if (devInfo.pageSize != 0x40  ||  devInfo.flashSize != 0x2000)
 		throw std::string("Incorrect page of flash size.");
 
-	ProgressBar pb("Bootload");
+	ProgressBar pb("Bootloading");
 	
 	DeviceData data;
-	for (int addr = 0; addr < 6 * 1024; addr += sizeof data.flash)
+	for (int addr = 0; addr <= lastFlashByte  &&  addr < mem.GetFlashSize(); addr += sizeof data.flash)
 	{
 		data.SetAddr(addr);
 		memcpy(data.flash, mem.GetFlash() + addr, sizeof data.flash);
 		
-		// check if the block is empty
-		size_t c;
-		for (c = 0; c < sizeof data.flash  &&  data.flash[c] == 0xff; c++)
-			;
-			
-		if (c < sizeof data.flash)
-			bootloader.SetReport((const uint8_t*) &data, sizeof data, sizeof data, 2);
+		bootloader.SetReport((const uint8_t*) &data, sizeof data, sizeof data, 2);
 
 		pb.Refresh(addr / double(6*1024));
 	}
@@ -87,4 +84,6 @@ void DoBootload(const std::string& HexForBootloader)
 	bootloader.SetReport((const uint8_t*) &devInfo, sizeof devInfo, sizeof devInfo, 1);
 	// Ignore errors here. If the device reboots before we poll the response,
 	// this request fails.
+	
+	printf("\n\nnrfburner firmware updated successfully.");
 }

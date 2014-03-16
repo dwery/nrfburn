@@ -217,6 +217,19 @@ void FlashMemory::SaveHex(const std::string& filename) const
 	fclose(fhex);
 }
 
+int FlashMemory::GetFlashLastByte() const
+{
+	const uint8_t* pBuff = flashBuffer.get();
+	int cnt;
+	for (cnt = GetFlashSize() - 1; cnt > 0; --cnt)
+	{
+		if (pBuff[cnt] != 0xff)
+			return cnt;
+	}
+	
+	return 0;
+}
+
 // compare flashes - used for verification
 const bool FlashMemory::operator == (const FlashMemory& lhs) const
 {

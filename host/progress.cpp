@@ -11,7 +11,6 @@ void ProgressBar::Refresh(const double progress)
 
 	std::string hashes(size_t(progress * 50), '#');
 
-	printf("\r%-10s | %-50s | %3i%%  %.2fs", process_name, hashes.c_str(), int(progress * 100), seconds);
+	printf("\r%-11s | %-50s | %3i%%  %.2fs", process_name, hashes.c_str(), int(progress * 100), seconds);
 	fflush(stdout);
 }
-
