@@ -14,7 +14,7 @@
 class Programmer
 {
 private:
-	HIDBurner	hidBurn;		// the programmer communication
+	HIDDevice	hidBurn;		// the programmer communication
 
 	uint8_t		fsr;
 	uint8_t		fpcr;
@@ -41,22 +41,13 @@ private:
 	
 	enum { InfoPageSize = 512 };
 	
-	struct ProgressBar
+	void SendRequestRaw(const uint8_t* buffer, const int bytes);
+	
+	template <class T>
+	void SendRequest(const T& request)
 	{
-		clock_t			time_begin;
-		const char* 	process_name;
-		
-		ProgressBar(const char* pn)
-			: time_begin(clock()), process_name(pn)
-		{}
-		
-		~ProgressBar()
-		{
-			printf("\n");
-		}
-
-		void Refresh(const double progress);
-	};
+		SendRequestRaw((const uint8_t*) &request, sizeof request);
+	}
 	
 public:
 	Programmer(const int fs)

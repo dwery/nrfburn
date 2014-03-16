@@ -11,8 +11,7 @@
 #include <string>
 
 #include "hiddev.h"
-#include "../firmware/usbconfig.h"
-#include "../firmware/prg_common.h"
+//#include "../firmware/prg_common.h"
 
 #define USBOPEN_SUCCESS         0   	// no error
 #define USBOPEN_ERR_ACCESS      1   	// not enough permissions to open device
@@ -72,7 +71,7 @@ std::string GetErrorString(int error)
 	return ret_val;
 }
 		
-int usbhidOpenDevice(usbDevice_t** device, int vendor, char* vendorName, int product, char* productName)
+int usbhidOpenDevice(usbDevice_t** device, int vendor, const char* vendorName, int product, const char* productName)
 {
 	GUID                                hidGuid;        	// GUID for HID driver
 	HDEVINFO                            deviceInfoList;
@@ -244,7 +243,7 @@ static int usbhidGetStringAscii(usb_dev_handle* dev, int index, char* buf, int b
 	return i - 1;
 }
 
-int usbhidOpenDevice(usbDevice_t** device, int vendor, char* vendorName, int product, char* productName)
+int usbhidOpenDevice(usbDevice_t** device, int vendor, const char* vendorName, int product, const char* productName)
 {
 	struct usb_bus*     bus;
 	struct usb_device*  dev;
@@ -363,68 +362,42 @@ int usbhidGetReport(usbDevice_t* device, int reportNumber, char* buffer, int* le
 /* ######################################################################## */
 
 
-HIDBurner::HIDBurner()
+HIDDevice::HIDDevice()
 	: hHIDDev(NULL)
 {}
 
-HIDBurner::~HIDBurner()
+HIDDevice::~HIDDevice()
 {
 	if (hHIDDev != NULL)
 		usbhidCloseDevice(hHIDDev);
 }
 
-void HIDBurner::Open()
+bool HIDDevice::Open(uint16_t vendor_id, const char* vendor_name, uint16_t device_id, const char* device_name)
 {
-	uint8_t rawVid[2] = {USB_CFG_VENDOR_ID};
-	uint8_t rawPid[2] = {USB_CFG_DEVICE_ID};
-	char vendorName[] = {USB_CFG_VENDOR_NAME, 0};
-	char productName[] = {USB_CFG_DEVICE_NAME, 0};
-	int vid = rawVid[0] + 256 * rawVid[1];
-	int pid = rawPid[0] + 256 * rawPid[1];
-	
-	if (usbhidOpenDevice(&hHIDDev, vid, vendorName, pid, productName) != 0)
-		throw std::string("Unable to open nrfburn programmer.");
+	return usbhidOpenDevice(&hHIDDev, vendor_id, vendor_name, device_id, device_name) == 0;
 }
 
-// #define LOG_HID_TRAFFIC
+//#define LOG_HID_TRAFFIC
 
-void HIDBurner::ReadFirst(uint8_t* buffer)
+void HIDDevice::GetReport(uint8_t* buffer, int report_size, uint8_t report_id)
 {
-	char rcvBuff[HIDREP_FIRST_BYTES + 1];
-	int len = sizeof rcvBuff;
-	int res = usbhidGetReport(hHIDDev, HIDREP_FIRST_ID, rcvBuff, &len);
+	int buff_size = report_size + 1;
+	char rcvBuff[buff_size];
+	int res = usbhidGetReport(hHIDDev, report_id, rcvBuff, &buff_size);
 	if (res != USBOPEN_SUCCESS)
-		throw std::string("Unable to read data from programmer");
+		throw std::string("Unable to read data from HID device");
 
-	memcpy(buffer, rcvBuff + 1, HIDREP_FIRST_BYTES);
+	memcpy(buffer, rcvBuff + 1, report_size);
 	
 #ifdef LOG_HID_TRAFFIC
-	printf("-- RF ");
-	for (int c = 0; c < HIDREP_FIRST_BYTES; ++c)
+	printf("-- Rep ");
+	for (int c = 0; c < report_size; ++c)
 		printf("%02x ", buffer[c]);
 	printf("\n");
 #endif	
 }
 
-void HIDBurner::ReadSecond(uint8_t* buffer)
-{
-	char rcvBuff[HIDREP_SECOND_BYTES + 1];
-	int len = sizeof rcvBuff;
-	int res = usbhidGetReport(hHIDDev, HIDREP_SECOND_ID, rcvBuff, &len);
-	if (res != USBOPEN_SUCCESS)
-		throw std::string("Unable to read data from programmer");
-
-	memcpy(buffer, rcvBuff + 1, HIDREP_SECOND_BYTES);
-
-#ifdef LOG_HID_TRAFFIC
-	printf("-- RS ");
-	for (int c = 0; c < HIDREP_SECOND_BYTES; ++c)
-		printf("%02x ", buffer[c]);
-	printf("\n");
-#endif	
-}
-
-void HIDBurner::WriteBytes(const uint8_t* buffer, const int bytes)
+void HIDDevice::SetReport(const uint8_t* buffer, int bytes, int report_size, uint8_t report_id)
 {
 #ifdef LOG_HID_TRAFFIC
 	printf("-- W  ");
@@ -432,32 +405,17 @@ void HIDBurner::WriteBytes(const uint8_t* buffer, const int bytes)
 		printf("%02x ", buffer[c]);
 	printf("\n");
 #endif	
-	
-	char sendbuff[128];
-	memset(sendbuff, 0, sizeof sendbuff);
-	
-	// prepare the first report
-	sendbuff[0] = HIDREP_FIRST_ID;
-	
-	if (bytes > HIDREP_FIRST_BYTES)
-		memcpy(sendbuff + 1, buffer, HIDREP_FIRST_BYTES);
-	else
-		memcpy(sendbuff + 1, buffer, bytes);
+
+	// alloc and clear the buffer
+	int buff_size = report_size + 1;
+	char sendbuff[buff_size];
+	memset(sendbuff, 0, buff_size);
+
+	// set the report ID and the data
+	sendbuff[0] = report_id;
+	memcpy(sendbuff + 1, buffer, bytes);
 		
-	int result = usbhidSetReport(hHIDDev, sendbuff, HIDREP_FIRST_BYTES + 1);
+	int result = usbhidSetReport(hHIDDev, sendbuff, buff_size);
 	if (result != USBOPEN_SUCCESS)
 		throw std::string("Unable to send data to programmer.");
-
-	// if needed prepare and send the second report
-	if (bytes > HIDREP_FIRST_BYTES)
-	{
-		memset(sendbuff, 0, sizeof sendbuff);
-
-		sendbuff[0] = HIDREP_SECOND_ID;
-		memcpy(sendbuff + 1, buffer + HIDREP_FIRST_BYTES, bytes - HIDREP_FIRST_BYTES);
-		
-		int result = usbhidSetReport(hHIDDev, sendbuff, HIDREP_SECOND_BYTES + 1);
-		if (result != USBOPEN_SUCCESS)
-			throw std::string("Unable to send data to programmer.");
-	}
 }

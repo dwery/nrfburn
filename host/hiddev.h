@@ -4,27 +4,18 @@
 // or a libusb handle, depending on the backend implementation.
 struct usbDevice_t;
 
-class HIDBurner
+class HIDDevice
 {
 private:
 	usbDevice_t*	hHIDDev;
 	
 public:
-	HIDBurner();
-	~HIDBurner();
+	HIDDevice();
+	~HIDDevice();
 
-	void Open();
+	bool Open(uint16_t vendor_id, const char* vendor_name, uint16_t device_id, const char* device_name);
 	void Close();
 
-	// reads the first and the second HID report
-	void ReadFirst(uint8_t* buffer);	// buffer must be at least HIDREP_FIRST_BYTES bytes long
-	void ReadSecond(uint8_t* buffer);	// buffer must be at least HIDREP_SECOND_BYTES bytes long
-	
-	void WriteBytes(const uint8_t* buffer, const int bytes);
-
-	template <class T>
-	void Write(const T& t)
-	{
-		WriteBytes((const uint8_t*)&t, sizeof t);
-	}
+	void GetReport(uint8_t* buffer, int report_size, uint8_t report_id);
+	void SetReport(const uint8_t* buffer, int bytes, int report_size, uint8_t report_id);
 };

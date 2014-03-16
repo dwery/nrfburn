@@ -21,4 +21,4 @@ clean:
 all: clean $(TARGET)
 
 flash: clean $(TARGET)
-	nrfburn -w $(TARGET)
+	nrfburn -f 32 -w $(TARGET)

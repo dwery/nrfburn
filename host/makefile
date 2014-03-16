@@ -8,7 +8,7 @@ else
 	TARGET   = nrfburn
 endif
 	
-OBJS = hiddev.o main.o programmer.o flashmem.o
+OBJS = hiddev.o main.o programmer.o flashmem.o bootloader.o progress.o
 
 $(TARGET): $(OBJS)
 	g++ $(USBFLAGS) $(OBJS) -o $(TARGET) $(USBLIBS)

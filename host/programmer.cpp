@@ -7,11 +7,38 @@
 #include <string>
 #include <memory>
 
+// for vendor and device names and IDs
+#include "../firmware/usbconfig.h"
+
 #include "programmer.h"
+#include "progress.h"
 #include "utils.h"
 
+template <class Req>
+void reqSetChecksum(Req& req)
+{
+	uint8_t* pChecksum = &req.checksum;
+	uint8_t* pData = (uint8_t*) &req;
+	*pChecksum = 0;
+	while (pData < pChecksum)
+		*pChecksum ^= *pData++;
+}
+
+inline uint8_t req2resp(const int req)
+{
+	return req | 0x80;
+}
+
+// Sends the request to the programmer either in one or two HID reports
+void Programmer::SendRequestRaw(const uint8_t* buffer, const int bytes)
+{
+	hidBurn.SetReport(buffer, bytes < HIDREP_FIRST_BYTES ? bytes : HIDREP_FIRST_BYTES, HIDREP_FIRST_BYTES, HIDREP_FIRST_ID);
+
+	if (bytes > HIDREP_FIRST_BYTES)
+		hidBurn.SetReport(buffer + HIDREP_FIRST_BYTES, bytes - HIDREP_FIRST_BYTES, HIDREP_SECOND_BYTES, HIDREP_SECOND_ID);
+}
+
 // This one reads the response from the programmer.
-// The first byte is always the length of the data block to read.
 void Programmer::ReadResponseRaw(uint8_t* buff, size_t buff_size)
 {
 	memset(buff, 0, buff_size);		// wipe the buffer
@@ -21,7 +48,7 @@ void Programmer::ReadResponseRaw(uint8_t* buff, size_t buff_size)
 	int cnt = 0;
 	while (cnt < 15)
 	{
-		hidBurn.ReadFirst(buff);
+		hidBurn.GetReport(buff, HIDREP_FIRST_BYTES, HIDREP_FIRST_ID);
 
 		// if we have a response of length == 0 that means the programmer is still busy
 		if (pResp->length != 0)
@@ -38,7 +65,7 @@ void Programmer::ReadResponseRaw(uint8_t* buff, size_t buff_size)
 	
 	// read the rest of the message if necessary
 	if (pResp->length > HIDREP_FIRST_BYTES)
-		hidBurn.ReadSecond(buff + HIDREP_FIRST_BYTES);
+		hidBurn.GetReport(buff + HIDREP_FIRST_BYTES, HIDREP_SECOND_BYTES, HIDREP_SECOND_ID);
 	
 	// calc the checksum
 	int c;
@@ -94,31 +121,6 @@ size_t Programmer::ReadResponse2(Resp1& resp1, Resp2& resp2)
 	return retVal;
 }
 
-template <class Req>
-void reqSetChecksum(Req& req)
-{
-	uint8_t* pChecksum = &req.checksum;
-	uint8_t* pData = (uint8_t*) &req;
-	*pChecksum = 0;
-	while (pData < pChecksum)
-		*pChecksum ^= *pData++;
-}
-
-inline uint8_t req2resp(const int req)
-{
-	return req | 0x80;
-}
-
-void Programmer::ProgressBar::Refresh(const double progress)
-{
-	double seconds = (clock() - time_begin) / double(CLOCKS_PER_SEC);
-
-	std::string hashes(size_t(progress * 50), '#');
-
-	printf("\r%-10s | %-50s | %3i%%  %.2fs", process_name, hashes.c_str(), int(progress * 100), seconds);
-	fflush(stdout);
-}
-
 Programmer::~Programmer()
 {
 	if (needsProgEnd)
@@ -132,7 +134,7 @@ void Programmer::CheckProgrammerVer()
 	req.length = sizeof req;
 	req.request = reqVersion;
 	reqSetChecksum(req);
-	hidBurn.Write(req);
+	SendRequest(req);
 	
 	// read the response
 	resp_version_t resp_ver;
@@ -154,7 +156,7 @@ void Programmer::ReadFlashRegisters()
 	read_regs.length = sizeof read_regs;
 	read_regs.request = reqReadFsrFpcr;
 	reqSetChecksum(read_regs);
-	hidBurn.Write(read_regs);
+	SendRequest(read_regs);
 
 	resp_read_fsr_fpcr_t resp_regs;
 	ReadResponse1(resp_regs);
@@ -173,7 +175,7 @@ void Programmer::ProgBegin()
 	req.length = sizeof req;
 	req.request = reqProgBegin;
 	reqSetChecksum(req);
-	hidBurn.Write(req);
+	SendRequest(req);
 
 	// validate response
 	resp_simple_t resp;
@@ -192,7 +194,7 @@ void Programmer::ProgEnd()
 	req.length = sizeof req;
 	req.request = reqProgEnd;
 	reqSetChecksum(req);
-	hidBurn.Write(req);
+	SendRequest(req);
 
 	// validate response
 	resp_simple_t resp;
@@ -206,8 +208,16 @@ void Programmer::ProgEnd()
 
 void Programmer::Open()
 {
-	// open the port
-	hidBurn.Open();
+	uint8_t raw_vendor_id[2] = {USB_CFG_VENDOR_ID};
+	uint8_t raw_device_id[2] = {USB_CFG_DEVICE_ID};
+	char vendor_name[] = {USB_CFG_VENDOR_NAME, 0};
+	char device_name[] = {USB_CFG_DEVICE_NAME, 0};
+	uint16_t* pvid = (uint16_t*)raw_vendor_id;
+	uint16_t* pdid = (uint16_t*)raw_device_id;
+	
+	// open the programmer
+	if (!hidBurn.Open(*pvid, vendor_name, *pdid, device_name))
+		throw std::string("Unable to open nrfburn programmer.");
 
 	CheckProgrammerVer();
 }
@@ -234,7 +244,7 @@ void Programmer::EraseAll()
 	req.length = sizeof req;
 	req.request = reqEraseAll;
 	reqSetChecksum(req);
-	hidBurn.Write(req);
+	SendRequest(req);
 
 	pb.Refresh(0.5);
 	
@@ -260,12 +270,12 @@ void Programmer::WriteChunk(const bool isInfoPage, const FlashMemory& flash, con
 	memcpy(req.data, flash.GetFlash() + offset, PROG_CHUNK_SIZE);
 	req.request = isInfoPage ? reqWriteInfoPage : reqWriteMainBlock;
 	reqSetChecksum(req);
-	hidBurn.Write(req);
+	SendRequest(req);
 
 	// validate the response
 	resp_simple_t resp;
 	ReadResponse1(resp);
-
+	
 	if (resp.response != req2resp(req.request))
 		throw std::string("Unexpected response from programmer in WriteChunk()");
 }
@@ -281,7 +291,7 @@ void Programmer::ReadChunk(const bool isInfoPage, FlashMemory& flash, const int 
 	req.address = offset;
 	req.request = isInfoPage ? reqReadInfoPage : reqReadMainBlock;
 	reqSetChecksum(req);
-	hidBurn.Write(req);
+	SendRequest(req);
 
 	// We can receive one of two responses:
 	// a full resp_read_flash_t response that contains the entire flash block,
@@ -361,11 +371,11 @@ void Programmer::WriteMainBlock(const std::string& hexfilename)
 	
 	flash.LoadHex(hexfilename);		// read the HEX file
 
+	EraseAll();			// erase the chip's MainBlock
+
 	// do the flash writing
 	ProgressBar pb("Writing MB");
 	
-	EraseAll();			// erase the chip's MainBlock
-
 	// start writing the flash
 	int address = 0;
 	while (address < flash.GetFlashSize())
@@ -442,7 +452,7 @@ void Programmer::WriteInfoPage(const uint8_t chipID[5])
 	erasePage.request = reqErasePageIP;
 	reqSetChecksum(erasePage);
 	
-	hidBurn.Write(erasePage);
+	SendRequest(erasePage);
 
 	pb.Refresh(0.3);
 	
@@ -461,7 +471,7 @@ void Programmer::WriteInfoPage(const uint8_t chipID[5])
 	memset(writeFlash.data, 0xff, sizeof writeFlash.data);
 	memcpy(writeFlash.data + 0x0B, chipID, CHIP_ID_BYTES);
 	reqSetChecksum(writeFlash);
-	hidBurn.Write(writeFlash);
+	SendRequest(writeFlash);
 
 	pb.Refresh(0.6);
 	
@@ -483,7 +493,7 @@ void Programmer::DisableReadback(const int region)
 	req.request = region == DISABLE_MB ? reqDisReadMainBlock : reqDisReadInfoPage;
 	reqSetChecksum(req);
 	
-	hidBurn.Write(req);
+	SendRequest(req);
 	
 	pb.Refresh(0.5);
 
@@ -507,7 +517,7 @@ void Programmer::ResetTarget()
 	resetTarget.length = sizeof resetTarget;
 	resetTarget.request = reqResetTarget;
 	reqSetChecksum(resetTarget);
-	hidBurn.Write(resetTarget);
+	SendRequest(resetTarget);
 
 	pb.Refresh(0.6);
 	

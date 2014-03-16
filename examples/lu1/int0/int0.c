@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "reg24lu1.h"
 #include "utils.h"
 
