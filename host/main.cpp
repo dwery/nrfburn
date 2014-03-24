@@ -14,7 +14,7 @@
 
 void PrintVer()
 {
-	printf("nrfburn v0.1  build %s %s\n", __DATE__, __TIME__);
+	puts("nrfburn v0.1  build " __DATE__ " " __TIME__);
 }
 
 void PrintHelp()
@@ -22,8 +22,8 @@ void PrintHelp()
 	PrintVer();
 	puts("Usage: nrfburn [options]");	puts("Options:");	puts("  -f 16|32       Specify flash size in kilobytes. Only 16 or 32 are valid.");	puts("  -w <filename>  Write contents of HEX file to nRF target MainBlock flash.");	puts("                 Automatically performs a chip erase before programming.");	puts("                 Runs a verification pass after writing is complete.");	puts("  -v <filename>  Verify nRF target MainBlock with contents of HEX file.");	puts("  -r <filename>  Read nRF target MainBlock into HEX file.");	puts("  -p <filename>  Read nRF target InfoPage into HEX file.");	puts("  -e             Perform a chip erase. This erases only the MainBlock, ");	puts("                 and leaves the InfoPage intact.");	puts("  -i <chipID>    Erase the InfoPage and write the specified chip ID.");	puts("                 This also performs a chip erase. chipID must be in the");	puts("                 the format xx-xx-xx-xx-xx where x is a hex digit.");	puts("                 WARNING!");
 	puts("                 Don't do this unless you know exactly what you're doing!");
-	puts("                 Erasing the InfoPage on a nRF24LE1 will erase calibration");
-	puts("                 information.");
+	puts("                 Erasing the InfoPage on a nRF24LE1 will erase the chip's");
+	puts("                 calibration information which you do not want.");
 	puts("  -d mb|ip       Disable SPI reading of MainBlock or InfoPage.");
 	puts("  -s             Reset the target nRF chip.");
 	puts("  -b <filename>  Update programmer firmware from HEX.");

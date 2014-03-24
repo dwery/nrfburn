@@ -1,9 +1,10 @@
-#include <string>
-#include <memory>
-
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <time.h>
+
+#include <string>
+#include <memory>
 
 #include "hiddev.h"
 #include "flashmem.h"
