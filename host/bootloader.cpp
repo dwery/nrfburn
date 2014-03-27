@@ -10,6 +10,7 @@
 #include "flashmem.h"
 #include "programmer.h"
 #include "progress.h"
+#include "utils.h"
 
 #include "../firmware/bootloader/usbconfig.h"
 
@@ -64,7 +65,7 @@ void DoBootload(const std::string& HexForBootloader)
 	bootloader.GetReport((uint8_t*) &devInfo, sizeof devInfo, 1);
 
 	if (devInfo.pageSize != 0x40  ||  devInfo.flashSize != 0x2000)
-		throw std::string("Incorrect page of flash size.");
+		throw std::string("Incorrect page of flash size. Page size equals " + int2str(devInfo.pageSize) + ", should be 64.");
 
 	ProgressBar pb("Bootloading");
 	
