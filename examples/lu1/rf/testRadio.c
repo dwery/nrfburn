@@ -1,62 +1,22 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "reg24lu1.h"
-#include "utils.h"
+#include "nrfutils.h"
+#include "nrfdbg.h"
 
 #include "nRF24L.h"
 
-/*
-
-#define BAUD_57K6   1015  // = Round(1024 - (2*16e6)/(64*57600))
-#define BAUD_38K4   1011  // = Round(1024 - (2*16e6)/(64*38400))
-#define BAUD_19K2    998  // = Round(1024 - (2*16e6)/(64*19200))
-#define BAUD_9K6     972  // = Round(1024 - (2*16e6)/(64*9600))
-
-void uart_init(void)
-{
-	uint16_t temp;
-
-	ES0 = 0;			// Disable UART0 interrupt while initializing
-	REN0 = 1;			// Enable receiver
-	SM0 = 0;			// Mode 1..
-	SM1 = 1;			// ..8 bit variable baud rate
-	PCON |= 0x80; 		// SMOD = 1
-	WDCON |= 0x80;		// Select internal baud rate generator
-	temp = BAUD_57K6;
-	//temp = BAUD_38K4;
-	//temp = BAUD_9K6;
-	//temp = BAUD_19K2;
-	S0RELL = (uint8_t)temp;
-	S0RELH = (uint8_t)(temp >> 8);
-
-	P0ALT |= 0x06;		// Select alternate functions on P01 and P02
-	P0EXP &= 0xf0;		// Select RxD on P01 and TxD on P02
-	P0DIR |= 0x02;		// P01 (RxD) is input
-
-	TI0 = 1;		
-	//ES0 = 1;			// Enable UART0 interrupt
-}
-
-void putchar(char c)
-{
-	while (TI0 == 0)
-		;
-    TI0 = 0;
-    S0BUF = c;
-}
-*/
-
-/*
 void main()
 {
 	// receiver address
-	__xdata uint8_t RxAddr[] = {0x34, 0x43, 0x10, 0x10, 0x01};
+	__code uint8_t RxAddr[] = {0x34, 0x43, 0x10, 0x10, 0x01};
 	
 	P0DIR = 0x00;	// all out; LED is on P03
 
-	uart_init();
+	uartInit();
 	printf("here, here");
 	P03 = 1;
 	
@@ -94,5 +54,3 @@ void main()
 		}
 	}
 }
-*/
-

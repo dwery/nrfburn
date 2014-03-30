@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include "reg24lu1.h"
-#include "utils.h"
+#include "nrfutils.h"
 
 // this is an example of INT0
 
@@ -10,7 +10,7 @@
 // This, in turn, will call the ISR which causes a transition on P0.0
 
 // ISR for interrupt on P0.3
-void EXT_INT0_ISR(void) __interrupt 0
+void ISR_EXT_INT0(void) __interrupt 0
 {
 	// toggle P0.0
 	P00 = P00 ? 0 : 1;

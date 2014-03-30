@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 #include "reg24lu1.h"
-#include "utils.h"
+#include "nrfutils.h"
 
 #include "usb_defs.h"
 #include "usb_desc.h"

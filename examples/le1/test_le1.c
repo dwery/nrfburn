@@ -1,54 +1,18 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "reg24le1.h"
-#include "utils.h"
+#include "nrfdbg.h"
+#include "nrfutils.h"
 
 #include "nRF24L.h"
-
-#define BAUD_57K6   1015  // = Round(1024 - (2*16e6)/(64*57600))
-#define BAUD_38K4   1011  // = Round(1024 - (2*16e6)/(64*38400))
-#define BAUD_19K2    998  // = Round(1024 - (2*16e6)/(64*19200))
-#define BAUD_9K6     972  // = Round(1024 - (2*16e6)/(64*9600))
-
-void uartInit(void)
-{
-	uint16_t temp;
-
-	ES0 = 0;			// Disable UART0 interrupt while initializing
-	REN0 = 1;			// Enable receiver
-	SM0 = 0;			// Mode 1..
-	SM1 = 1;			// ..8 bit variable baud rate
-	PCON |= 0x80; 		// SMOD = 1
-	WDCON |= 0x80;		// Select internal baud rate generator
-	temp = BAUD_57K6;
-	//temp = BAUD_38K4;
-	//temp = BAUD_9K6;
-	//temp = BAUD_19K2;
-	S0RELL = (uint8_t)temp;
-	S0RELH = (uint8_t)(temp >> 8);
-
-	P0ALT |= 0x06;		// Select alternate functions on P01 and P02
-	P0EXP &= 0xf0;		// Select RxD on P01 and TxD on P02
-	P0DIR |= 0x02;		// P01 (RxD) is input
-
-	TI0 = 1;		
-	//ES0 = 1;			// Enable UART0 interrupt
-}
-
-void putchar(char c)
-{
-	while (TI0 == 0)
-		;
-    TI0 = 0;
-    S0BUF = c;
-}
 
 #define NRF_ADDR_SIZE	5
 #define CHANNEL_NUM		2
 
-__xdata const uint8_t DongleAddr[] = {0x36, 0xC4, 0x31, 0x40, 0x03};
+__code const uint8_t DongleAddr[] = {0x36, 0xC4, 0x31, 0x40, 0x03};
 	
 void main()
 {

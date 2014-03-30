@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "reg24lu1.h"
-#include "utils.h"
+#include "nrfutils.h"
 
 #include "keycode.h"
 
