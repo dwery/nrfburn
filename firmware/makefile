@@ -5,16 +5,15 @@ F_CPU   = 12000000
 AVRDUDE = avrdude -c dragon_isp -P usb -p $(DEVICE)
 #AVRDUDE = avrdude -c stk500v2 -P avrdoper -p $(DEVICE)
 
-VPATH = usbdrv
+VPATH = usbdrv:../mcu-lib
 
-CFLAGS	= -I. -Wall -Os -Iusbdrv -flto
-
+CFLAGS	= -I. -Wall -Os -Iusbdrv -I../mcu-lib -flto
 LFLAGS  = -Wl,--relax -flto
 #LFLAGS += -u vfprintf -lprintf_min
 
 COMPILE = avr-gcc -mmcu=$(DEVICE) -DF_CPU=$(F_CPU) $(CFLAGS)
 
-OBJECTS = main.o avr_serial.o prg_spi.o prg_parse.o usb.o usbdrv.o usbdrvasm.o
+OBJECTS = main.o avrdbg.o prg_spi.o prg_parse.o usb.o usbdrv.o usbdrvasm.o
 
 hex: $(TARGET).hex
 

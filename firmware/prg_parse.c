@@ -6,8 +6,8 @@
 #include <avr/io.h>
 
 #include "hw_setup.h"
-#include "avr_serial.h"
-#include "utils.h"
+#include "avrdbg.h"
+#include "avrutils.h"
 #include "prg_parse.h"
 #include "prg_spi.h"
 

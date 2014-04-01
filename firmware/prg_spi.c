@@ -6,7 +6,7 @@
 
 #include "hw_setup.h"
 #include "prg_common.h"
-#include "utils.h"
+#include "avrutils.h"
 
 // SPI commands
 enum {

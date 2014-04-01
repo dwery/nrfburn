@@ -7,8 +7,8 @@
 #include <util/delay.h>
 
 #include "hw_setup.h"
-#include "avr_serial.h"
-#include "utils.h"
+#include "avrdbg.h"
+#include "avrutils.h"
 #include "prg_spi.h"
 #include "prg_parse.h"
 #include "usbdrv.h"
@@ -25,7 +25,7 @@ void init_hw(void)
 	SetBit(DDR(LED_USB_PORT), LED_USB_BIT);
 	ClrBit(PORT(LED_USB_PORT), LED_USB_BIT);
 
-	uartInit();			// serial port (debugging only)
+	dbgInit();			// init the UART debug output
 	
 	progParseInit();	// init the programming protocol interface
 

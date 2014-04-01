@@ -7,8 +7,8 @@
 	
 #include "usbdrv.h"
 #include "hw_setup.h"
-#include "utils.h"
-#include "avr_serial.h"
+#include "avrutils.h"
+#include "avrdbg.h"
 #include "prg_parse.h"
 
 // We are defining feature HID reports which, unlike input/outputs reports can travel in both directions:

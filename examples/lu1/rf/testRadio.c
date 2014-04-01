@@ -16,7 +16,7 @@ void main()
 	
 	P0DIR = 0x00;	// all out; LED is on P03
 
-	uartInit();
+	dbgInit();
 	printf("here, here");
 	P03 = 1;
 	
