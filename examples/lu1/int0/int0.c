@@ -10,7 +10,7 @@
 // This, in turn, will call the ISR which causes a transition on P0.0
 
 // ISR for interrupt on P0.3
-void ISR_EXT_INT0(void) __interrupt 0
+void ISR_EXT_INT0(void) __interrupt INTERRUPT_EXT_INT0
 {
 	// toggle P0.0
 	P00 = P00 ? 0 : 1;
