@@ -52,10 +52,13 @@ static void ProgDisableSPI(void)
 	// config the SPI pins to input and disable the pullup - leave everything floating
 	ClrBit(PORT(MOSI_PORT), MOSI_BIT);		// MOSI
 	ClrBit(DDR(MOSI_PORT), MOSI_BIT);
+	
 	ClrBit(PORT(SCK_PORT), SCK_BIT);		// SCK
 	ClrBit(DDR(SCK_PORT), SCK_BIT);
+	
 	ClrBit(PORT(CSN_PORT), CSN_BIT);		// CSN
 	ClrBit(DDR(CSN_PORT), CSN_BIT);
+
 	ClrBit(DDR(MISO_PORT), MISO_BIT);		// MISO
 	ClrBit(PORT(MISO_PORT), MISO_BIT);
 }
