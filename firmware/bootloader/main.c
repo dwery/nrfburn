@@ -15,8 +15,8 @@
 #include <util/delay.h>
 
 #include "usbdrv.h"
+#include "avrutils.h"
 #include "../hw_setup.h"
-#include "../utils.h"
 
 /* ------------------------------------------------------------------------ */
 
