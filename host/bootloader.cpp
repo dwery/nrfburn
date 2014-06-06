@@ -59,7 +59,7 @@ void DoBootload(const std::string& HexForBootloader)
 	mem.LoadHex(HexForBootloader);
 
 	const int lastFlashByte = mem.GetFlashLastByte();
-	printf("Firmware size %i bytes\n\n", lastFlashByte);
+	printf("Firmware size %i bytes\n\n", lastFlashByte + 1);
 	
 	DeviceInfo devInfo;
 	bootloader.GetReport((uint8_t*) &devInfo, sizeof devInfo, 1);
