@@ -121,7 +121,7 @@ void FlashMemory::LoadHex(const std::string& filename)
 		if (record_type == 0)	// data record
 		{
 			if (address + num_data_bytes > flashSize)
-				throw std::string("Invalid HEX file. Address points outside flash memory.");
+				throw std::string("Invalid HEX file. Address points outside flash memory. " + int2hex(address + num_data_bytes) + " of " + int2hex(flashSize));
 
 			while (num_data_bytes--)
 				pFlash[address++] = GetHexByte(pHex, checksum);

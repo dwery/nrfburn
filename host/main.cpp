@@ -215,6 +215,13 @@ std::string int2str(const int i)
 	return buff;
 }
 
+std::string int2hex(const unsigned short i)
+{
+	char buff[32];
+	snprintf(buff, sizeof buff, "0x%04x", i);
+	return buff;
+}
+
 void DoProg(const Options& opt)
 {
 	// open the programmer
