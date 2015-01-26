@@ -43,6 +43,7 @@ void init_hw(void)
 	sei();
 }
 
+/*
 void swdLineReset(void)
 {
 	// drive 1
@@ -160,7 +161,6 @@ struct swd_operation_t
 	uint32_t		data;
 };
 
-/*
 int main(void)
 {
 	SetBit(DDR(SWDCLK_PORT), SWDCLK_BIT);
