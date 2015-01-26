@@ -1,5 +1,17 @@
+# select target board
+#TARGET_BOARD = USBASP
+TARGET_BOARD = NRFBURN
+
+
 TARGET  = nrfavr
-DEVICE  = atmega88p
+ifeq ($(TARGET_BOARD),NRFBURN)
+	DEVICE  = atmega88a
+else ifeq ($(TARGET_BOARD),USBASP)
+	DEVICE  = atmega8a
+else
+    $(error Please set TARGET_BOARD to either NRFBURN or USBASP)
+endif
+
 F_CPU   = 12000000
 
 AVRDUDE = avrdude -c dragon_isp -P usb -p $(DEVICE)
@@ -7,13 +19,19 @@ AVRDUDE = avrdude -c dragon_isp -P usb -p $(DEVICE)
 
 VPATH = usbdrv:../mcu-lib
 
-CFLAGS	= -I. -Wall -Os -Iusbdrv -I../mcu-lib -flto
+CFLAGS  = -I. -Wall -Os -Iusbdrv -I../mcu-lib -flto
+ifeq ($(TARGET_BOARD),USBASP)
+	CFLAGS += -DON_USBASP
+endif
 LFLAGS  = -Wl,--relax -flto
 #LFLAGS += -u vfprintf -lprintf_min
 
 COMPILE = avr-gcc -mmcu=$(DEVICE) -DF_CPU=$(F_CPU) $(CFLAGS)
 
-OBJECTS = main.o avrdbg.o prg_spi.o prg_parse.o usb.o usbdrv.o usbdrvasm.o
+OBJECTS = main.o prg_spi.o prg_parse.o usb.o usbdrv.o usbdrvasm.o
+ifeq ($(TARGET_BOARD),NRFBURN)
+	OBJECTS += avrdbg.o 
+endif
 
 hex: $(TARGET).hex
 

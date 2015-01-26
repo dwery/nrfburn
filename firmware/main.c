@@ -25,7 +25,9 @@ void init_hw(void)
 	SetBit(DDR(LED_USB_PORT), LED_USB_BIT);
 	ClrBit(PORT(LED_USB_PORT), LED_USB_BIT);
 
-	dbgInit();			// init the UART debug output
+#ifndef	ON_USBASP
+	dbgInit();			// init the UART debug output (only possible on the nrfBurn board)
+#endif
 	
 	progParseInit();	// init the programming protocol interface
 

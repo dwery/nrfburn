@@ -31,7 +31,7 @@
 #define TGT_RST_BIT		0
 
 
-// the nRF51822 SWD interface
+// the nRF51822 SWD interface (not yet implemented)
 #define SWDCLK_PORT		B
 #define SWDCLK_BIT		5
 
