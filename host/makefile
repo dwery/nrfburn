@@ -11,7 +11,7 @@ endif
 OBJS = hiddev.o main.o programmer.o flashmem.o bootloader.o progress.o
 
 $(TARGET): $(OBJS)
-	g++ $(USBFLAGS) $(OBJS) -o $(TARGET) $(USBLIBS)
+	g++ -static-libgcc -static-libstdc++ $(USBFLAGS) $(OBJS) -o $(TARGET) $(USBLIBS)
 
 %.o: %.cpp
 	g++ $(USBFLAGS) -Wall -O2 -c $(<) -o $*.o
